@@ -1,0 +1,12 @@
+
+> frontend@1.0.0 dev /Users/ericbeaudoin/GoCampProjects/frontend
+> vite
+
+
+  VITE v5.4.21  ready in 1921 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+21 h 54 min 26 s [vite] page reload src/pages/admin/CampsitesPage.jsx
+22 h 23 min 54 s [vite] page reload src/App.jsx
