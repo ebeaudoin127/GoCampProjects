@@ -1,0 +1,10 @@
+node_modules/
+logs/
+archives/
+backend/build/
+backend/target/
+frontend/dist/
+frontend/build/
+.gradle/
+.DS_Store
+*.log
