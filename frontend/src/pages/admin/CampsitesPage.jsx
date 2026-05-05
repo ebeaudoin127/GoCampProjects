@@ -1,7 +1,8 @@
 
+
 // ============================================================
 // Fichier : frontend/src/pages/admin/CampsitesPage.jsx
-// Dernière modification : 2026-04-24
+// Dernière modification : 2026-04-29
 //
 // Résumé :
 // - Liste des sites d’un camping
@@ -13,6 +14,9 @@
 //      1) Contour : Fait / À faire
 //      2) Photos : x/3
 // - Ajout du bouton "Établir la tarification"
+// - Correction du tri naturel des codes de site :
+//      1, 2, 3, 10
+//      A101, A102, A103, B101
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -38,6 +42,19 @@ function getPhotoCount(site) {
 
 function isSiteComplete(site) {
   return hasPolygon(site) && getPhotoCount(site) >= 3;
+}
+
+function sortSitesByCode(sites) {
+  return [...(Array.isArray(sites) ? sites : [])].sort((a, b) =>
+    String(a?.siteCode ?? "").localeCompare(
+      String(b?.siteCode ?? ""),
+      "fr-CA",
+      {
+        numeric: true,
+        sensitivity: "base",
+      }
+    )
+  );
 }
 
 export default function CampsitesPage() {
@@ -90,26 +107,28 @@ export default function CampsitesPage() {
   const filteredSites = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    if (!q) return sites;
+    if (!q) return sortSitesByCode(sites);
 
-    return sites.filter((site) => {
-      const haystack = [
-        site.siteCode,
-        site.pricingOptionName,
-        site.siteTypeName,
-        site.siteServiceTypeName,
-        site.siteAmperageName,
-        site.isPullThrough ? "pull through" : "",
-        site.isActive ? "actif" : "inactif",
-        hasPolygon(site) ? "contour fait" : "contour à faire",
-        `photos ${getPhotoCount(site)}`,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    return sortSitesByCode(
+      sites.filter((site) => {
+        const haystack = [
+          site.siteCode,
+          site.pricingOptionName,
+          site.siteTypeName,
+          site.siteServiceTypeName,
+          site.siteAmperageName,
+          site.isPullThrough ? "pull through" : "",
+          site.isActive ? "actif" : "inactif",
+          hasPolygon(site) ? "contour fait" : "contour à faire",
+          `photos ${getPhotoCount(site)}`,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      return haystack.includes(q);
-    });
+        return haystack.includes(q);
+      })
+    );
   }, [sites, search]);
 
   const getStatusClass = (site) => {
@@ -309,3 +328,7 @@ export default function CampsitesPage() {
     </div>
   );
 }
+
+
+
+

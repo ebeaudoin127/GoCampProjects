@@ -1,10 +1,11 @@
 // ============================================================
 // Fichier : CampgroundDetailsResponse.java
-// Dernière modification : 2026-04-17
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
 // - DTO détaillé pour afficher ou éditer un camping
+// - Inclut les périodes de réservation configurables
 // ============================================================
 
 package com.gocamp.reservecamping.campground.dto;
@@ -13,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 public class CampgroundDetailsResponse {
 
@@ -62,6 +64,8 @@ public class CampgroundDetailsResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private List<CampgroundReservationPeriodResponse> reservationPeriods;
+
     public CampgroundDetailsResponse(
             Long id,
             String name,
@@ -96,7 +100,8 @@ public class CampgroundDetailsResponse {
             Boolean isWinterCamping,
             Boolean isActive,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            LocalDateTime updatedAt,
+            List<CampgroundReservationPeriodResponse> reservationPeriods
     ) {
         this.id = id;
         this.name = name;
@@ -132,6 +137,7 @@ public class CampgroundDetailsResponse {
         this.isActive = isActive;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.reservationPeriods = reservationPeriods;
     }
 
     public Long getId() {
@@ -268,5 +274,9 @@ public class CampgroundDetailsResponse {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public List<CampgroundReservationPeriodResponse> getReservationPeriods() {
+        return reservationPeriods;
     }
 }

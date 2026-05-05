@@ -1,7 +1,6 @@
-
 // ============================================================
 // Fichier : frontend/src/components/map/CampgroundMapViewer.jsx
-// Dernière modification : 2026-04-27
+// Dernière modification : 2026-04-29
 //
 // Résumé :
 // - Zoom/pan fluide
@@ -12,6 +11,7 @@
 // - Hover seulement visuel, sans popup qui suit la souris
 // - Double-clic sur site = modifier
 // - Mode édition : ajout, déplacement et suppression de points
+// - Correction du tri naturel des codes de site : 1,2,10 / A101,A102
 // ============================================================
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -29,6 +29,19 @@ const SNAP_SIZE = 5;
 
 function snap(value) {
   return Math.round(value / SNAP_SIZE) * SNAP_SIZE;
+}
+
+function sortSitesByCode(sites) {
+  return [...(Array.isArray(sites) ? sites : [])].sort((a, b) =>
+    String(a?.siteCode ?? "").localeCompare(
+      String(b?.siteCode ?? ""),
+      "fr-CA",
+      {
+        numeric: true,
+        sensitivity: "base",
+      }
+    )
+  );
 }
 
 function pointsToSvg(points) {
@@ -80,6 +93,7 @@ export default function CampgroundMapViewer({
   const imageHeight = mapData?.imageHeight || 900;
   const backgroundImagePath = mapData?.backgroundImagePath || "";
   const sites = Array.isArray(mapData?.sites) ? mapData.sites : [];
+  const sortedSites = useMemo(() => sortSitesByCode(sites), [sites]);
   const elements = Array.isArray(mapData?.elements) ? mapData.elements : [];
 
   const viewportRef = useRef(null);
@@ -546,7 +560,7 @@ export default function CampgroundMapViewer({
                   );
                 })}
 
-                {sites.map((site) => {
+                {sortedSites.map((site) => {
                   const points = pointsToSvg(site.polygon);
                   if (!points) return null;
 
@@ -767,20 +781,18 @@ export default function CampgroundMapViewer({
                 )}
 
                 {popupElement && (
-                  <>
-                    <p>
-                      Statut :{" "}
-                      <span
-                        className={
-                          popupElement.isActive
-                            ? "font-semibold text-green-700"
-                            : "font-semibold text-red-700"
-                        }
-                      >
-                        {popupElement.isActive ? "Actif" : "Inactif"}
-                      </span>
-                    </p>
-                  </>
+                  <p>
+                    Statut :{" "}
+                    <span
+                      className={
+                        popupElement.isActive
+                          ? "font-semibold text-green-700"
+                          : "font-semibold text-red-700"
+                      }
+                    >
+                      {popupElement.isActive ? "Actif" : "Inactif"}
+                    </span>
+                  </p>
                 )}
               </div>
             </div>

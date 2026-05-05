@@ -1,13 +1,13 @@
-
 // ============================================================
 // Fichier : frontend/src/pages/admin/CampgroundPricingWizardPage.jsx
-// Dernière modification : 2026-04-24
+// Dernière modification : 2026-04-29
 //
 // Résumé :
 // - Wizard complet restauré
 // - Ajout minimumNights
 // - Filtre regroupement
 // - Support calendrier Excel
+// - Correction du tri naturel des codes de site : 1,2,10 / A101,A102
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -41,11 +41,24 @@ const PRICING_TYPE = {
   DYNAMIC: "DYNAMIC",
 };
 
+function sortSitesByCode(sites) {
+  return [...(Array.isArray(sites) ? sites : [])].sort((a, b) =>
+    String(a?.siteCode ?? "").localeCompare(
+      String(b?.siteCode ?? ""),
+      "fr-CA",
+      {
+        numeric: true,
+        sensitivity: "base",
+      }
+    )
+  );
+}
+
 function buildGrouping(sites) {
   const groupsMap = new Map();
   const ungrouped = [];
 
-  sites.forEach((site) => {
+  sortSitesByCode(sites).forEach((site) => {
     const hasGroup = !!site.pricingOptionId || !!site.pricingOptionName;
 
     if (!hasGroup) {
@@ -74,9 +87,12 @@ function buildGrouping(sites) {
 
   return {
     groups: Array.from(groupsMap.values()).sort((a, b) =>
-      a.pricingOptionName.localeCompare(b.pricingOptionName, "fr")
+      a.pricingOptionName.localeCompare(b.pricingOptionName, "fr-CA", {
+        numeric: true,
+        sensitivity: "base",
+      })
     ),
-    ungrouped,
+    ungrouped: sortSitesByCode(ungrouped),
   };
 }
 
@@ -160,7 +176,7 @@ export default function CampgroundPricingWizardPage() {
         ]);
 
         setCampground(c);
-        setSites(s || []);
+        setSites(sortSitesByCode(s || []));
         setPricingRules(r || []);
       } catch (e) {
         setError("Erreur chargement tarification");
@@ -172,7 +188,8 @@ export default function CampgroundPricingWizardPage() {
     load();
   }, [campgroundId]);
 
-  const { groups } = useMemo(() => buildGrouping(sites), [sites]);
+  const sortedSites = useMemo(() => sortSitesByCode(sites), [sites]);
+  const { groups } = useMemo(() => buildGrouping(sortedSites), [sortedSites]);
 
   const groupRules = useMemo(
     () => pricingRules.filter((r) => r.targetType === "GROUP"),
@@ -528,7 +545,7 @@ export default function CampgroundPricingWizardPage() {
             </h2>
 
             <div className="grid gap-3 md:grid-cols-4">
-              {sites.map((site) => (
+              {sortedSites.map((site) => (
                 <label
                   key={site.id}
                   className="rounded-xl border px-4 py-3 cursor-pointer hover:bg-slate-50"
@@ -583,7 +600,7 @@ export default function CampgroundPricingWizardPage() {
                 </span>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {group.sites.map((site) => (
+                  {sortSitesByCode(group.sites).map((site) => (
                     <span
                       key={site.id}
                       className="rounded-full bg-slate-100 px-3 py-1 text-sm"

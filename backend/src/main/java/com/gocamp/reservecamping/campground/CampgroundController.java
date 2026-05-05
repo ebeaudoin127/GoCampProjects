@@ -1,13 +1,13 @@
 // ============================================================
 // Fichier : CampgroundController.java
-// Dernière modification : 2026-04-17
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
 // - Contrôleur backend du module campings
 // - Endpoints pour créer, lister, consulter et modifier
-// - Pour l'instant accessible aux utilisateurs connectés
-// - On ajoutera ensuite le contrôle de rôle SUPER_ADMIN
+// - Accessible aux utilisateurs connectés selon la configuration Security
+// - Retourne les messages d'erreur propres au frontend
 // ============================================================
 
 package com.gocamp.reservecamping.campground;

@@ -1,11 +1,13 @@
+
 // ============================================================
 // Fichier : frontend/src/App.jsx
-// Dernière modification : 2026-04-24
+// Dernière modification : 2026-05-04
 //
 // Résumé des modifications :
 // - Ajout de la route carte du camping
 // - Ajout de la route du wizard "Établir la tarification"
 // - Ajout de la route des règles tarifaires d’un site précis
+// - Ajout de la route de gestion des promotions marketing d’un camping
 // ============================================================
 
 import React from "react";
@@ -25,6 +27,7 @@ import SiteUsersPage from "./pages/admin/SiteUsersPage";
 import SiteCampgroundsPage from "./pages/admin/SiteCampgroundsPage";
 import CreateCampgroundPage from "./pages/admin/CreateCampgroundPage";
 import EditCampgroundPage from "./pages/admin/EditCampgroundPage";
+import CampgroundPromotionsPage from "./pages/admin/CampgroundPromotionsPage";
 
 import CampsitesPage from "./pages/admin/CampsitesPage";
 import CreateCampsitePage from "./pages/admin/CreateCampsitePage";
@@ -115,6 +118,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
             <EditCampgroundPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/site-manager/campgrounds/:campgroundId/promotions"
+        element={
+          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+            <CampgroundPromotionsPage />
           </ProtectedRoute>
         }
       />

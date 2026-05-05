@@ -1,12 +1,13 @@
 // ============================================================
 // Fichier : Campground.java
-// Dernière modification : 2026-04-16
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
 // - Entité principale d'un camping
 // - Reliée à country et province_state
 // - Contient les infos générales, coordonnées, capacités et statut
+// - Contient les périodes de réservation configurables par camping
 // ============================================================
 
 package com.gocamp.reservecamping.campground.model;
@@ -159,12 +160,27 @@ public class Campground {
     @OneToMany(mappedBy = "campground", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CampgroundPromotion> promotions = new ArrayList<>();
 
+    @OneToMany(mappedBy = "campground", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("startDate ASC, endDate ASC")
+    private List<CampgroundReservationPeriod> reservationPeriods = new ArrayList<>();
+
     @PrePersist
     public void prePersist() {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
 
+        normalizeDefaults();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+
+        normalizeDefaults();
+    }
+
+    private void normalizeDefaults() {
         if (this.totalSites == null) this.totalSites = 0;
         if (this.sites3Services == null) this.sites3Services = 0;
         if (this.sites2Services == null) this.sites2Services = 0;
@@ -174,11 +190,7 @@ public class Campground {
         if (this.hasWifi == null) this.hasWifi = false;
         if (this.isWinterCamping == null) this.isWinterCamping = false;
         if (this.isActive == null) this.isActive = true;
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        if (this.reservationPeriods == null) this.reservationPeriods = new ArrayList<>();
     }
 
     public Campground() {
@@ -458,5 +470,13 @@ public class Campground {
 
     public void setPromotions(List<CampgroundPromotion> promotions) {
         this.promotions = promotions;
+    }
+
+    public List<CampgroundReservationPeriod> getReservationPeriods() {
+        return reservationPeriods;
+    }
+
+    public void setReservationPeriods(List<CampgroundReservationPeriod> reservationPeriods) {
+        this.reservationPeriods = reservationPeriods;
     }
 }

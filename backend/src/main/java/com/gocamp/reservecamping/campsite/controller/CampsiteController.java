@@ -6,6 +6,11 @@
 // Résumé :
 // - CRUD des sites
 // - Ajout de la sauvegarde du polygone de carte
+//
+// ------------------------------------------------------------
+// MODIFICATIONS (2026-04-29)
+// - Ajout endpoint DELETE pour réinitialiser le polygone
+//   (suppression du contour en BD)
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.controller;
@@ -50,6 +55,15 @@ public class CampsiteController {
     @PutMapping("/{id}/map-shape")
     public Object updateMapShape(@PathVariable Long id, @RequestBody UpdateCampsiteMapShapeRequest req) {
         service.updateMapShape(id, req);
+        return java.util.Map.of("success", true);
+    }
+
+    // ============================================================
+    // NOUVEAU : suppression / reset du polygone
+    // ============================================================
+    @DeleteMapping("/{id}/map-shape")
+    public Object deleteMapShape(@PathVariable Long id) {
+        service.deleteMapShape(id);
         return java.util.Map.of("success", true);
     }
 }

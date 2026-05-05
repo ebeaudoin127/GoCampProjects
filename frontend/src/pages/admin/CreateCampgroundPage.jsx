@@ -1,18 +1,22 @@
 // ============================================================
 // Fichier : src/pages/admin/CreateCampgroundPage.jsx
-// Dernière modification : 2026-04-17
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
 // - Formulaire de création d’un camping
 // - Charge les pays et provinces/états
 // - Envoie un POST /api/campgrounds
+// - Inclut les périodes de réservation configurables
 // ============================================================
 
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Save } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import ReservationPeriodsEditor, {
+  validateReservationPeriods,
+} from "../../components/campground/ReservationPeriodsEditor";
 
 const initialForm = {
   name: "",
@@ -44,6 +48,7 @@ const initialForm = {
   hasWifi: false,
   isWinterCamping: false,
   isActive: true,
+  reservationPeriods: [],
 };
 
 export default function CreateCampgroundPage() {
@@ -103,11 +108,28 @@ export default function CreateCampgroundPage() {
     await loadProvinces(countryId);
   };
 
+  const buildReservationPeriodsPayload = () => {
+    return (form.reservationPeriods || []).map((period) => ({
+      id: period.id || null,
+      startDate: period.startDate || null,
+      endDate: period.endDate || null,
+      active: period.active !== false,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     setSuccessMessage("");
+
+    const reservationPeriodErrors = validateReservationPeriods(form.reservationPeriods);
+
+    if (reservationPeriodErrors.length > 0) {
+      setError(reservationPeriodErrors.join(" "));
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const payload = {
@@ -140,6 +162,7 @@ export default function CreateCampgroundPage() {
         hasWifi: !!form.hasWifi,
         isWinterCamping: !!form.isWinterCamping,
         isActive: !!form.isActive,
+        reservationPeriods: buildReservationPeriodsPayload(),
       };
 
       const created = await api.post("/campgrounds", payload);
@@ -351,53 +374,10 @@ export default function CreateCampgroundPage() {
             </h2>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Téléphone principal
-                </label>
-                <input
-                  type="text"
-                  value={form.phoneMain}
-                  onChange={(e) => updateField("phoneMain", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Téléphone secondaire
-                </label>
-                <input
-                  type="text"
-                  value={form.phoneSecondary}
-                  onChange={(e) => updateField("phoneSecondary", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Courriel
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => updateField("email", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Site web
-                </label>
-                <input
-                  type="text"
-                  value={form.website}
-                  onChange={(e) => updateField("website", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
+              <TextField label="Téléphone principal" value={form.phoneMain} onChange={(value) => updateField("phoneMain", value)} />
+              <TextField label="Téléphone secondaire" value={form.phoneSecondary} onChange={(value) => updateField("phoneSecondary", value)} />
+              <TextField label="Courriel" type="email" value={form.email} onChange={(value) => updateField("email", value)} />
+              <TextField label="Site web" value={form.website} onChange={(value) => updateField("website", value)} />
             </div>
           </div>
 
@@ -407,55 +387,17 @@ export default function CreateCampgroundPage() {
             </h2>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Date d’ouverture
-                </label>
-                <input
-                  type="date"
-                  value={form.openingDate}
-                  onChange={(e) => updateField("openingDate", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Date de fermeture
-                </label>
-                <input
-                  type="date"
-                  value={form.closingDate}
-                  onChange={(e) => updateField("closingDate", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Heure d’arrivée
-                </label>
-                <input
-                  type="time"
-                  value={form.checkInTime}
-                  onChange={(e) => updateField("checkInTime", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Heure de départ
-                </label>
-                <input
-                  type="time"
-                  value={form.checkOutTime}
-                  onChange={(e) => updateField("checkOutTime", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </div>
+              <TextField label="Date d’ouverture" type="date" value={form.openingDate} onChange={(value) => updateField("openingDate", value)} />
+              <TextField label="Date de fermeture" type="date" value={form.closingDate} onChange={(value) => updateField("closingDate", value)} />
+              <TextField label="Heure d’arrivée" type="time" value={form.checkInTime} onChange={(value) => updateField("checkInTime", value)} />
+              <TextField label="Heure de départ" type="time" value={form.checkOutTime} onChange={(value) => updateField("checkOutTime", value)} />
             </div>
           </div>
+
+          <ReservationPeriodsEditor
+            value={form.reservationPeriods}
+            onChange={(value) => updateField("reservationPeriods", value)}
+          />
 
           <div className="bg-white rounded-3xl shadow-sm border p-6">
             <h2 className="text-xl font-semibold text-slate-900 mb-4">
@@ -463,41 +405,12 @@ export default function CreateCampgroundPage() {
             </h2>
 
             <div className="grid gap-4 md:grid-cols-3">
-              <NumberField
-                label="Total des sites"
-                value={form.totalSites}
-                onChange={(value) => updateField("totalSites", value)}
-              />
-
-              <NumberField
-                label="Sites 3 services"
-                value={form.sites3Services}
-                onChange={(value) => updateField("sites3Services", value)}
-              />
-
-              <NumberField
-                label="Sites 2 services"
-                value={form.sites2Services}
-                onChange={(value) => updateField("sites2Services", value)}
-              />
-
-              <NumberField
-                label="Sites 1 service"
-                value={form.sites1Service}
-                onChange={(value) => updateField("sites1Service", value)}
-              />
-
-              <NumberField
-                label="Sites sans service"
-                value={form.sitesNoService}
-                onChange={(value) => updateField("sitesNoService", value)}
-              />
-
-              <NumberField
-                label="Sites voyageurs"
-                value={form.travelerSitesCount}
-                onChange={(value) => updateField("travelerSitesCount", value)}
-              />
+              <NumberField label="Total des sites" value={form.totalSites} onChange={(value) => updateField("totalSites", value)} />
+              <NumberField label="Sites 3 services" value={form.sites3Services} onChange={(value) => updateField("sites3Services", value)} />
+              <NumberField label="Sites 2 services" value={form.sites2Services} onChange={(value) => updateField("sites2Services", value)} />
+              <NumberField label="Sites 1 service" value={form.sites1Service} onChange={(value) => updateField("sites1Service", value)} />
+              <NumberField label="Sites sans service" value={form.sitesNoService} onChange={(value) => updateField("sitesNoService", value)} />
+              <NumberField label="Sites voyageurs" value={form.travelerSitesCount} onChange={(value) => updateField("travelerSitesCount", value)} />
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -515,23 +428,9 @@ export default function CreateCampgroundPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 mt-6">
-              <CheckboxField
-                label="Wi-Fi disponible"
-                checked={form.hasWifi}
-                onChange={(value) => updateField("hasWifi", value)}
-              />
-
-              <CheckboxField
-                label="Camping hivernal"
-                checked={form.isWinterCamping}
-                onChange={(value) => updateField("isWinterCamping", value)}
-              />
-
-              <CheckboxField
-                label="Camping actif"
-                checked={form.isActive}
-                onChange={(value) => updateField("isActive", value)}
-              />
+              <CheckboxField label="Wi-Fi disponible" checked={form.hasWifi} onChange={(value) => updateField("hasWifi", value)} />
+              <CheckboxField label="Camping hivernal" checked={form.isWinterCamping} onChange={(value) => updateField("isWinterCamping", value)} />
+              <CheckboxField label="Camping actif" checked={form.isActive} onChange={(value) => updateField("isActive", value)} />
             </div>
           </div>
 
@@ -566,6 +465,22 @@ export default function CreateCampgroundPage() {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function TextField({ label, type = "text", value, onChange }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border px-4 py-3"
+      />
     </div>
   );
 }

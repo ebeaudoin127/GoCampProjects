@@ -1,10 +1,11 @@
 // ============================================================
 // Fichier : CreateCampgroundRequest.java
-// Dernière modification : 2026-04-17
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
 // - DTO pour créer un camping
+// - Inclut les périodes de réservation configurables
 // ============================================================
 
 package com.gocamp.reservecamping.campground.dto;
@@ -12,6 +13,7 @@ package com.gocamp.reservecamping.campground.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 public record CreateCampgroundRequest(
 
@@ -49,6 +51,9 @@ public record CreateCampgroundRequest(
         Integer shadePercentage,
         Boolean hasWifi,
         Boolean isWinterCamping,
-        Boolean isActive
+        Boolean isActive,
 
-) {}
+        List<CampgroundReservationPeriodRequest> reservationPeriods
+
+) {
+}

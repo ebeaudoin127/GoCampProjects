@@ -1,19 +1,19 @@
-
 // ============================================================
 // Fichier : frontend/src/pages/admin/CampgroundMapPage.jsx
-// Dernière modification : 2026-04-27
+// Dernière modification : 2026-04-29
 //
 // Résumé :
 // - Page carte interactive
 // - Supporte l’ouverture en contexte d’un site via ?siteId=
 // - Une seule carte pour vue + sélection + édition
 // - Ajout de 3 onglets : Tous les sites / Contour à dessiner / Photos à ajouter
-// - L’onglet Photos à ajouter montre seulement les sites avec moins de 3 photos
-// - Affiche le compteur de photos x/3
-// - Dans "Tous les sites", le badge Actif devient rouge si le site est incomplet
-// - Ajout édition des points du polygone existant :
-//      1) Glisser un point rouge pour le déplacer
-//      2) Double-clic sur un point rouge pour le supprimer
+// - Correction du tri naturel des codes de site : 1,2,10 / A101,A102
+//
+// ------------------------------------------------------------
+// MODIFICATIONS (2026-04-29)
+// - Ajout d’un bouton pour réinitialiser/supprimer le polygone en BD
+// - Appel DELETE /campsites/{id}/map-shape
+// - Vide le brouillon, quitte le mode édition et recharge la carte
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -23,6 +23,19 @@ import api from "../../services/api";
 import CampgroundMapViewer from "../../components/map/CampgroundMapViewer";
 import MapLegend from "../../components/map/MapLegend";
 import CampsitePhotoManager from "../../components/campsite/CampsitePhotoManager";
+
+function sortSitesByCode(sites) {
+  return [...(Array.isArray(sites) ? sites : [])].sort((a, b) =>
+    String(a?.siteCode ?? "").localeCompare(
+      String(b?.siteCode ?? ""),
+      "fr-CA",
+      {
+        numeric: true,
+        sensitivity: "base",
+      }
+    )
+  );
+}
 
 function computeCentroid(points) {
   if (!points.length) return { x: 0, y: 0 };
@@ -87,7 +100,7 @@ export default function CampgroundMapPage() {
   }, [campgroundId]);
 
   const sites = useMemo(() => {
-    return Array.isArray(mapData?.sites) ? mapData.sites : [];
+    return sortSitesByCode(Array.isArray(mapData?.sites) ? mapData.sites : []);
   }, [mapData]);
 
   useEffect(() => {
@@ -109,14 +122,14 @@ export default function CampgroundMapPage() {
 
   const displayedSites = useMemo(() => {
     if (siteTab === "to-draw") {
-      return sites.filter((site) => !hasPolygon(site));
+      return sortSitesByCode(sites.filter((site) => !hasPolygon(site)));
     }
 
     if (siteTab === "photos") {
-      return sites.filter((site) => (site.photoCount ?? 0) < 3);
+      return sortSitesByCode(sites.filter((site) => (site.photoCount ?? 0) < 3));
     }
 
-    return sites;
+    return sortSitesByCode(sites);
   }, [sites, siteTab]);
 
   const handleSiteClick = (site) => {
@@ -195,7 +208,7 @@ export default function CampgroundMapPage() {
 
   const resetDraft = () => {
     setDraftPoints([]);
-    setMessage("");
+    setMessage("Brouillon réinitialisé. Le polygone en base de données n’a pas été supprimé.");
   };
 
   const reloadExistingPolygon = () => {
@@ -234,6 +247,40 @@ export default function CampgroundMapPage() {
     } catch (err) {
       console.error(err);
       setMessage(err.message || "Impossible de sauvegarder le polygone.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ============================================================
+  // MODIFICATION 2026-04-29
+  // Supprime le polygone du site sélectionné dans la base de données.
+  // ============================================================
+  const deleteSavedPolygon = async () => {
+    if (!selectedSite) {
+      setMessage("Sélectionne un site avant de réinitialiser le polygone.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Réinitialiser le polygone du site ${selectedSite.siteCode} ?\n\nCette action supprimera le contour enregistré en base de données.`
+    );
+
+    if (!confirmed) return;
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await api.delete(`/campsites/${selectedSite.id}/map-shape`);
+
+      setDraftPoints([]);
+      setEditMode(false);
+      setMessage("Polygone réinitialisé avec succès.");
+      await loadMap();
+    } catch (err) {
+      console.error(err);
+      setMessage(err.message || "Impossible de réinitialiser le polygone.");
     } finally {
       setSaving(false);
     }
@@ -473,15 +520,28 @@ export default function CampgroundMapPage() {
                           </button>
 
                           {!editMode ? (
-                            <button
-                              type="button"
-                              onClick={startEdit}
-                              className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800"
-                            >
-                              {hasPolygon(selectedSite)
-                                ? "Modifier le contour"
-                                : "Commencer le dessin"}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={startEdit}
+                                className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800"
+                              >
+                                {hasPolygon(selectedSite)
+                                  ? "Modifier le contour"
+                                  : "Commencer le dessin"}
+                              </button>
+
+                              {hasPolygon(selectedSite) && (
+                                <button
+                                  type="button"
+                                  onClick={deleteSavedPolygon}
+                                  disabled={saving}
+                                  className="w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  Réinitialiser le polygone
+                                </button>
+                              )}
+                            </>
                           ) : (
                             <>
                               <button
@@ -506,6 +566,15 @@ export default function CampgroundMapPage() {
                                 className="w-full rounded-xl bg-white border px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
                               >
                                 Réinitialiser le brouillon
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={deleteSavedPolygon}
+                                disabled={saving}
+                                className="w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Réinitialiser le polygone en BD
                               </button>
 
                               <button

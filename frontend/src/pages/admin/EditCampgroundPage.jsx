@@ -1,12 +1,13 @@
 // ============================================================
 // Fichier : src/pages/admin/EditCampgroundPage.jsx
-// Dernière modification : 2026-04-17
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
 // - Formulaire d’édition d’un camping
 // - Ajout des services / activités / hébergements
 // - Intégration des icônes via IconRenderer
+// - Inclut les périodes de réservation configurables
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -14,6 +15,9 @@ import { ArrowLeft, Save } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../../services/api";
 import IconRenderer from "../../components/IconRenderer";
+import ReservationPeriodsEditor, {
+  validateReservationPeriods,
+} from "../../components/campground/ReservationPeriodsEditor";
 
 const initialForm = {
   name: "",
@@ -45,6 +49,7 @@ const initialForm = {
   hasWifi: false,
   isWinterCamping: false,
   isActive: true,
+  reservationPeriods: [],
 };
 
 export default function EditCampgroundPage() {
@@ -132,6 +137,14 @@ export default function EditCampgroundPage() {
           hasWifi: !!campgroundData.hasWifi,
           isWinterCamping: !!campgroundData.isWinterCamping,
           isActive: campgroundData.isActive !== false,
+          reservationPeriods: Array.isArray(campgroundData.reservationPeriods)
+            ? campgroundData.reservationPeriods.map((period) => ({
+                id: period.id || null,
+                startDate: period.startDate || "",
+                endDate: period.endDate || "",
+                active: period.active !== false,
+              }))
+            : [],
         });
 
         setSelectedServiceIds(
@@ -201,11 +214,28 @@ export default function EditCampgroundPage() {
     );
   };
 
+  const buildReservationPeriodsPayload = () => {
+    return (form.reservationPeriods || []).map((period) => ({
+      id: period.id || null,
+      startDate: period.startDate || null,
+      endDate: period.endDate || null,
+      active: period.active !== false,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     setSuccessMessage("");
+
+    const reservationPeriodErrors = validateReservationPeriods(form.reservationPeriods);
+
+    if (reservationPeriodErrors.length > 0) {
+      setError(reservationPeriodErrors.join(" "));
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const payload = {
@@ -238,6 +268,7 @@ export default function EditCampgroundPage() {
         hasWifi: !!form.hasWifi,
         isWinterCamping: !!form.isWinterCamping,
         isActive: !!form.isActive,
+        reservationPeriods: buildReservationPeriodsPayload(),
       };
 
       await api.put(`/campgrounds/${id}`, payload);
@@ -272,21 +303,30 @@ export default function EditCampgroundPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="mb-6">
-          <Link
-            to="/site-manager/campgrounds"
-            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Retour à la gestion des campings
-          </Link>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <Link
+              to="/site-manager/campgrounds"
+              className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Retour à la gestion des campings
+            </Link>
 
-          <h1 className="text-3xl font-bold text-slate-900 mt-4">
-            Modifier un camping
-          </h1>
-          <p className="text-slate-600 mt-2">
-            Modifiez la fiche principale et les caractéristiques du camping.
-          </p>
+            <h1 className="text-3xl font-bold text-slate-900 mt-4">
+              Modifier un camping
+            </h1>
+            <p className="text-slate-600 mt-2">
+              Modifiez la fiche principale et les caractéristiques du camping.
+            </p>
+          </div>
+
+          <Link
+            to={`/site-manager/campgrounds/${id}/promotions`}
+            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            Gérer les promotions
+          </Link>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -494,6 +534,11 @@ export default function EditCampgroundPage() {
               </Field>
             </div>
           </Section>
+
+          <ReservationPeriodsEditor
+            value={form.reservationPeriods}
+            onChange={(value) => updateField("reservationPeriods", value)}
+          />
 
           <Section title="Capacités et options">
             <div className="grid gap-4 md:grid-cols-3">

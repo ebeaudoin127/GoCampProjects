@@ -1,6 +1,3 @@
-
-
-
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/service/CampsiteService.java
 // Dernière modification : 2026-04-20
@@ -15,6 +12,12 @@
 //   "detached entity passed to persist"
 // - Ajout de pricingOptionId / pricingOptionName dans la
 //   liste des sites pour supporter la tarification par regroupement
+//
+// ------------------------------------------------------------
+// MODIFICATIONS (2026-04-29)
+// - Ajout de deleteMapShape(Long id)
+// - Permet de supprimer/réinitialiser le polygone d’un site en BD
+// - Met à null : mapPolygonJson, labelX, labelY
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.service;
@@ -220,6 +223,22 @@ public class CampsiteService {
         campsite.setMapPolygonJson(req.mapPolygonJson());
         campsite.setLabelX(req.labelX());
         campsite.setLabelY(req.labelY());
+
+        repository.save(campsite);
+        entityManager.flush();
+    }
+
+    // ============================================================
+    // MODIFICATION 2026-04-29
+    // Supprime/réinitialise le polygone enregistré en base de données.
+    // ============================================================
+    public void deleteMapShape(Long id) {
+        Campsite campsite = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Site introuvable"));
+
+        campsite.setMapPolygonJson(null);
+        campsite.setLabelX(null);
+        campsite.setLabelY(null);
 
         repository.save(campsite);
         entityManager.flush();
