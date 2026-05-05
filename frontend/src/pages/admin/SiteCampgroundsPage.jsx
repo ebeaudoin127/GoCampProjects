@@ -1,10 +1,11 @@
 // ============================================================
 // Fichier : frontend/src/pages/admin/SiteCampgroundsPage.jsx
-// Dernière modification : 2026-04-18
+// Dernière modification : 2026-05-04
 //
 // Résumé :
 // - Liste des campings
 // - Ajout du bouton "Gérer les sites"
+// - Ajout du bouton "Promotions"
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -16,6 +17,7 @@ import {
   RefreshCcw,
   Search,
   MapPinned,
+  BadgePercent,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
@@ -192,6 +194,14 @@ export default function SiteCampgroundsPage() {
                           >
                             <MapPinned className="w-4 h-4" />
                             Gérer les sites
+                          </Link>
+
+                          <Link
+                            to={`/site-manager/campgrounds/${c.id}/pricing-promotions`}
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700"
+                          >
+                            <BadgePercent className="w-4 h-4" />
+                            Promotions
                           </Link>
 
                           <Link

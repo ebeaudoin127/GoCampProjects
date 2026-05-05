@@ -1,9 +1,10 @@
 // ============================================================
 // Fichier : PricingPromotionController.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-04
 //
 // Résumé :
-// - API REST pour les promotions
+// - API REST pour les promotions dynamiques
+// - Création / modification / suppression / lecture
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.controller;
@@ -26,16 +27,36 @@ public class PricingPromotionController {
         this.service = service;
     }
 
+    // ============================================================
+    // CRÉATION
+    // ============================================================
     @PostMapping
     public PricingPromotionResponse create(@RequestBody CreatePricingPromotionRequest req) {
         return service.create(req);
     }
 
+    // ============================================================
+    // MODIFICATION
+    // ============================================================
+    @PutMapping("/{id}")
+    public PricingPromotionResponse update(
+            @PathVariable Long id,
+            @RequestBody CreatePricingPromotionRequest req
+    ) {
+        return service.update(id, req);
+    }
+
+    // ============================================================
+    // LISTE PAR CAMPING
+    // ============================================================
     @GetMapping("/by-campground/{campgroundId}")
     public List<PricingPromotionResponse> getByCampground(@PathVariable Long campgroundId) {
         return service.getByCampground(campgroundId);
     }
 
+    // ============================================================
+    // SUPPRESSION
+    // ============================================================
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.delete(id);

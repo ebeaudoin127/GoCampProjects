@@ -35,6 +35,7 @@ import EditCampsitePage from "./pages/admin/EditCampsitePage";
 import CampgroundMapPage from "./pages/admin/CampgroundMapPage";
 import CampgroundPricingWizardPage from "./pages/admin/CampgroundPricingWizardPage";
 import CampsitePricingRulesPage from "./pages/admin/CampsitePricingRulesPage";
+import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 
 function ScrollToTop() {
   React.useEffect(() => {
@@ -190,6 +191,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["SUPER_ADMIN", "CAMPING_ADMIN", "GESTIONNAIRE"]}>
             <CampingManagerHome />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/site-manager/campgrounds/:campgroundId/promotions"
+        element={
+          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+            <PricingPromotionsPage />
           </ProtectedRoute>
         }
       />

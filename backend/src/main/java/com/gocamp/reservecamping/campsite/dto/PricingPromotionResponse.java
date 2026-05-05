@@ -1,9 +1,10 @@
 // ============================================================
 // Fichier : PricingPromotionResponse.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-04
 //
 // Résumé :
-// - DTO retourné au frontend
+// - DTO retourné au frontend pour les promotions dynamiques
+// - Inclut les cibles, types, montants, forfaits, jours et statut
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.dto;
@@ -20,20 +21,37 @@ import java.util.List;
 public record PricingPromotionResponse(
         Long id,
         String name,
+        String description,
+
         PricingTargetType targetType,
         PromotionApplicationMode applicationMode,
         PromotionType promotionType,
+
+        Long campsiteId,
+        Long pricingOptionId,
+        List<Long> campsiteIds,
 
         LocalDate startDate,
         LocalDate endDate,
 
         BigDecimal fixedPrice,
         BigDecimal discountPercent,
+        BigDecimal discountAmount,
 
         Integer buyNights,
         Integer payNights,
 
+        Integer packageNights,
+        BigDecimal packagePrice,
+
+        Integer requiredConsecutiveWeekends,
+
+        Integer minNights,
+        Integer maxNights,
+
         Integer priority,
+        Boolean combinable,
+        Boolean isActive,
 
         List<PricingDayOfWeek> days
 ) {}

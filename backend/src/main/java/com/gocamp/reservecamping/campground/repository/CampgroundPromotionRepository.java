@@ -1,10 +1,11 @@
 // ============================================================
 // Fichier : CampgroundPromotionRepository.java
-// Dernière modification : 2026-04-17
+// Dernière modification : 2026-05-04
 // Auteur : ChatGPT
 //
 // Résumé :
-// - Repository des promotions de camping
+// - Repository des promotions marketing d’un camping
+// - Basé sur la table campground_promotion
 // ============================================================
 
 package com.gocamp.reservecamping.campground.repository;
