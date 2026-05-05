@@ -1,12 +1,13 @@
+
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/model/PricingPromotion.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-04
 //
 // Résumé :
-// - Promotion ponctuelle pouvant bypasser ou ajuster
-//   la tarification normale
-// - Supporte SITE ou GROUP
-// - Supporte période, priorité et plusieurs types de promo
+// - Promotion tarifaire dynamique
+// - Supporte SITE, GROUP, ALL_CAMPGROUND et MULTI_CAMPSITE
+// - Supporte période, priorité, cumul, prix fixe, rabais %, rabais $,
+//   X nuits pour Y, X nuits pour X montant et fins de semaine consécutives
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.model;
@@ -68,17 +69,35 @@ public class PricingPromotion {
     @Column(name = "discount_percent", precision = 5, scale = 2)
     private BigDecimal discountPercent;
 
+    @Column(name = "discount_amount", precision = 10, scale = 2)
+    private BigDecimal discountAmount;
+
     @Column(name = "buy_nights")
     private Integer buyNights;
 
     @Column(name = "pay_nights")
     private Integer payNights;
 
+    @Column(name = "package_nights")
+    private Integer packageNights;
+
+    @Column(name = "package_price", precision = 10, scale = 2)
+    private BigDecimal packagePrice;
+
+    @Column(name = "required_consecutive_weekends")
+    private Integer requiredConsecutiveWeekends;
+
     @Column(name = "min_nights")
     private Integer minNights;
 
+    @Column(name = "max_nights")
+    private Integer maxNights;
+
     @Column(name = "priority", nullable = false)
     private Integer priority = 100;
+
+    @Column(name = "combinable", nullable = false)
+    private boolean combinable = false;
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
@@ -94,11 +113,18 @@ public class PricingPromotion {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
+        normalizeDefaults();
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+        normalizeDefaults();
+    }
+
+    private void normalizeDefaults() {
+        if (this.priority == null) this.priority = 100;
+        if (this.applicationMode == null) this.applicationMode = PromotionApplicationMode.ADJUSTMENT;
     }
 
     public Long getId() {
@@ -201,6 +227,14 @@ public class PricingPromotion {
         this.discountPercent = discountPercent;
     }
 
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
     public Integer getBuyNights() {
         return buyNights;
     }
@@ -217,6 +251,30 @@ public class PricingPromotion {
         this.payNights = payNights;
     }
 
+    public Integer getPackageNights() {
+        return packageNights;
+    }
+
+    public void setPackageNights(Integer packageNights) {
+        this.packageNights = packageNights;
+    }
+
+    public BigDecimal getPackagePrice() {
+        return packagePrice;
+    }
+
+    public void setPackagePrice(BigDecimal packagePrice) {
+        this.packagePrice = packagePrice;
+    }
+
+    public Integer getRequiredConsecutiveWeekends() {
+        return requiredConsecutiveWeekends;
+    }
+
+    public void setRequiredConsecutiveWeekends(Integer requiredConsecutiveWeekends) {
+        this.requiredConsecutiveWeekends = requiredConsecutiveWeekends;
+    }
+
     public Integer getMinNights() {
         return minNights;
     }
@@ -225,12 +283,28 @@ public class PricingPromotion {
         this.minNights = minNights;
     }
 
+    public Integer getMaxNights() {
+        return maxNights;
+    }
+
+    public void setMaxNights(Integer maxNights) {
+        this.maxNights = maxNights;
+    }
+
     public Integer getPriority() {
         return priority;
     }
 
     public void setPriority(Integer priority) {
         this.priority = priority;
+    }
+
+    public boolean isCombinable() {
+        return combinable;
+    }
+
+    public void setCombinable(boolean combinable) {
+        this.combinable = combinable;
     }
 
     public boolean isActive() {

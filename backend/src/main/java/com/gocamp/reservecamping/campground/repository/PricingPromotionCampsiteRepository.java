@@ -1,0 +1,21 @@
+// ============================================================
+// Fichier : PricingPromotionCampsiteRepository.java
+// Dernière modification : 2026-05-04
+//
+// Résumé :
+// - Repository des associations promotion ↔ sites
+// ============================================================
+
+package com.gocamp.reservecamping.campsite.repository;
+
+import com.gocamp.reservecamping.campsite.model.PricingPromotionCampsite;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface PricingPromotionCampsiteRepository extends JpaRepository<PricingPromotionCampsite, Long> {
+
+    List<PricingPromotionCampsite> findByPricingPromotionId(Long pricingPromotionId);
+
+    void deleteByPricingPromotionId(Long pricingPromotionId);
+}
