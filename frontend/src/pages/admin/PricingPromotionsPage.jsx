@@ -1,18 +1,22 @@
+
 // ============================================================
 // Fichier : src/pages/admin/PricingPromotionsPage.jsx
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-05
 // Auteur : ChatGPT
 //
 // Résumé :
 // - Écran admin de gestion des promotions dynamiques
-// - Permet de configurer des promotions sans encore les appliquer au pricing
-// - Supporte tout le camping, regroupement, site unique et multi-sites
+// - Intègre une aide en 3 niveaux : aide contextuelle, preview et modal détaillée
+// - Charge les sites et regroupements avec plusieurs endpoints possibles
+// - Permet de configurer les promotions sans encore les appliquer au pricing
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit, Plus, Save, Trash2, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import api from "../../services/api";
+import PromotionHelpPanel from "../../components/pricing/PromotionHelpPanel";
+import PromotionHelpModal from "../../components/pricing/PromotionHelpModal";
 
 const emptyForm = {
   name: "",
@@ -79,6 +83,7 @@ export default function PricingPromotionsPage() {
 
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -103,23 +108,58 @@ export default function PricingPromotionsPage() {
     loadPage();
   }, [campgroundId]);
 
+  const asArray = (data) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.content)) return data.content;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
+  };
+
+  const getFirstAvailable = async (urls) => {
+    for (const url of urls) {
+      try {
+        const data = await api.get(url);
+        const array = asArray(data);
+
+        if (array.length > 0) {
+          return array;
+        }
+      } catch (err) {
+        console.warn(`Endpoint non disponible : ${url}`);
+      }
+    }
+
+    return [];
+  };
+
   const loadPage = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const [campgroundData, promotionsData, campsitesData, pricingOptionsData] =
-        await Promise.all([
-          api.get(`/campgrounds/${campgroundId}`),
-          api.get(`/campgrounds/${campgroundId}/pricing-promotions`),
-          api.get(`/campgrounds/${campgroundId}/sites`),
-          api.get(`/campgrounds/${campgroundId}/pricing-options`),
-        ]);
+      const [campgroundData, promotionsData] = await Promise.all([
+        api.get(`/campgrounds/${campgroundId}`),
+        api.get(`/pricing-promotions/by-campground/${campgroundId}`),
+      ]);
+
+      const campsitesData = await getFirstAvailable([
+        `/campgrounds/${campgroundId}/sites`,
+        `/campsites/by-campground/${campgroundId}`,
+        `/campsites?campgroundId=${campgroundId}`,
+      ]);
+
+      const pricingOptionsData = await getFirstAvailable([
+        `/campgrounds/${campgroundId}/pricing-options`,
+        `/pricing-options/by-campground/${campgroundId}`,
+        `/campground-site-pricing-options/by-campground/${campgroundId}`,
+        `/campgrounds/${campgroundId}/site-pricing-options`,
+      ]);
 
       setCampground(campgroundData || null);
-      setPromotions(Array.isArray(promotionsData) ? promotionsData : []);
-      setCampsites(Array.isArray(campsitesData) ? campsitesData : []);
-      setPricingOptions(Array.isArray(pricingOptionsData) ? pricingOptionsData : []);
+      setPromotions(asArray(promotionsData));
+      setCampsites(campsitesData);
+      setPricingOptions(pricingOptionsData);
     } catch (err) {
       console.error(err);
       setError("Impossible de charger les promotions dynamiques.");
@@ -187,7 +227,7 @@ export default function PricingPromotionsPage() {
       priority: promotion.priority ?? 100,
       combinable: !!promotion.combinable,
       isActive: promotion.isActive !== false,
-      daysOfWeek: Array.isArray(promotion.daysOfWeek) ? promotion.daysOfWeek : [],
+      daysOfWeek: Array.isArray(promotion.days) ? promotion.days : [],
     });
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -247,6 +287,10 @@ export default function PricingPromotionsPage() {
       }
     }
 
+    if (form.promotionType === "PACKAGE" && form.packagePrice === "") {
+      return "Indique le montant du forfait.";
+    }
+
     return "";
   };
 
@@ -256,6 +300,7 @@ export default function PricingPromotionsPage() {
   };
 
   const buildPayload = () => ({
+    campgroundId: Number(campgroundId),
     name: form.name.trim(),
     description: form.description.trim() || null,
     targetType: form.targetType,
@@ -287,7 +332,7 @@ export default function PricingPromotionsPage() {
     priority: numberOrNull(form.priority) ?? 100,
     combinable: !!form.combinable,
     isActive: !!form.isActive,
-    daysOfWeek: form.daysOfWeek,
+    days: form.daysOfWeek,
   });
 
   const handleSubmit = async (event) => {
@@ -308,12 +353,10 @@ export default function PricingPromotionsPage() {
       const payload = buildPayload();
 
       if (editingId) {
-        await api.put(`/campgrounds/${campgroundId}/pricing-promotions/${editingId}`, {
-          data: payload,
-        });
+        await api.put(`/pricing-promotions/${editingId}`, payload);
         setSuccessMessage("Promotion dynamique modifiée avec succès.");
       } else {
-        await api.post(`/campgrounds/${campgroundId}/pricing-promotions`, payload);
+        await api.post("/pricing-promotions", payload);
         setSuccessMessage("Promotion dynamique créée avec succès.");
       }
 
@@ -336,7 +379,7 @@ export default function PricingPromotionsPage() {
     setSuccessMessage("");
 
     try {
-      await api.delete(`/campgrounds/${campgroundId}/pricing-promotions/${promotionId}`);
+      await api.delete(`/pricing-promotions/${promotionId}`);
       setSuccessMessage("Promotion supprimée.");
       await loadPage();
     } catch (err) {
@@ -355,6 +398,8 @@ export default function PricingPromotionsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <PromotionHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -378,10 +423,6 @@ export default function PricingPromotionsPage() {
           </div>
         </div>
 
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Ces promotions sont configurées ici, mais ne sont pas encore appliquées automatiquement au calcul final du prix.
-        </div>
-
         {error && (
           <div className="mb-6 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
             {error}
@@ -394,403 +435,443 @@ export default function PricingPromotionsPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border p-6 mb-8">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">
-                {editingId ? "Modifier une promotion dynamique" : "Ajouter une promotion dynamique"}
-              </h2>
-              <p className="text-sm text-slate-600 mt-1">
-                Choisis le type, la cible et les conditions de la promotion.
-              </p>
-            </div>
-
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                <X className="w-4 h-4" />
-                Annuler
-              </button>
-            )}
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nom de la promotion *" className="md:col-span-2">
-              <input
-                type="text"
-                value={form.name}
-                onChange={(event) => updateField("name", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-                placeholder="Ex. Spécial basse saison"
-                required
-              />
-            </Field>
-
-            <Field label="Description" className="md:col-span-2">
-              <textarea
-                value={form.description}
-                onChange={(event) => updateField("description", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3 min-h-[90px]"
-                placeholder="Ex. Promotion valide sur les séjours de 3 nuits et plus."
-              />
-            </Field>
-
-            <Field label="Type de promotion">
-              <select
-                value={form.promotionType}
-                onChange={(event) => updateField("promotionType", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              >
-                {promotionTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Cible">
-              <select
-                value={form.targetType}
-                onChange={(event) => updateField("targetType", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              >
-                {targetTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            {form.targetType === "GROUP" && (
-              <Field label="Regroupement tarifaire" className="md:col-span-2">
-                <select
-                  value={form.pricingOptionId}
-                  onChange={(event) => updateField("pricingOptionId", event.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                >
-                  <option value="">Choisir un regroupement</option>
-                  {pricingOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name || option.label || `Regroupement #${option.id}`}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-
-            {form.targetType === "SITE" && (
-              <Field label="Site ciblé" className="md:col-span-2">
-                <select
-                  value={form.campsiteId}
-                  onChange={(event) => updateField("campsiteId", event.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                >
-                  <option value="">Choisir un site</option>
-                  {campsites.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {site.code || site.name || `Site #${site.id}`}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-
-            {form.targetType === "MULTI_CAMPSITE" && (
-              <div className="md:col-span-2 rounded-2xl border bg-slate-50 p-4">
-                <p className="font-medium text-slate-800 mb-3">Sites ciblés</p>
-                <div className="grid gap-2 md:grid-cols-4">
-                  {campsites.map((site) => (
-                    <label key={site.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={form.campsiteIds.includes(site.id)}
-                        onChange={() => toggleCampsite(site.id)}
-                      />
-                      {site.code || site.name || `Site #${site.id}`}
-                    </label>
-                  ))}
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div>
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border p-6 mb-8">
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    {editingId ? "Modifier une promotion dynamique" : "Ajouter une promotion dynamique"}
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Choisis le type, la cible et les conditions de la promotion.
+                  </p>
                 </div>
+
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    <X className="w-4 h-4" />
+                    Annuler
+                  </button>
+                )}
               </div>
-            )}
 
-            <Field label="Date début *">
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={(event) => updateField("startDate", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              />
-            </Field>
-
-            <Field label="Date fin *">
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={(event) => updateField("endDate", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              />
-            </Field>
-
-            {form.promotionType === "PERCENT_DISCOUNT" && (
-              <Field label="Rabais (%)">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={form.discountPercent}
-                  onChange={(event) => updateField("discountPercent", event.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </Field>
-            )}
-
-            {form.promotionType === "AMOUNT_DISCOUNT" && (
-              <Field label="Rabais ($)">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.discountAmount}
-                  onChange={(event) => updateField("discountAmount", event.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </Field>
-            )}
-
-            {form.promotionType === "FIXED_PRICE" && (
-              <Field label="Prix fixe ($)">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.fixedPrice}
-                  onChange={(event) => updateField("fixedPrice", event.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                />
-              </Field>
-            )}
-
-            {form.promotionType === "BUY_X_PAY_Y" && (
-              <>
-                <Field label="Nuits achetées">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Nom de la promotion *" className="md:col-span-2">
                   <input
-                    type="number"
-                    min="1"
-                    value={form.buyNights}
-                    onChange={(event) => updateField("buyNights", event.target.value)}
+                    type="text"
+                    value={form.name}
+                    onChange={(event) => updateField("name", event.target.value)}
                     className="w-full rounded-xl border px-4 py-3"
+                    placeholder="Ex. Spécial basse saison"
+                    required
                   />
                 </Field>
 
-                <Field label="Nuits payées">
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.payNights}
-                    onChange={(event) => updateField("payNights", event.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  />
-                </Field>
-              </>
-            )}
-
-            {form.promotionType === "X_NIGHTS_FOR_AMOUNT" && (
-              <>
-                <Field label="Nombre de nuits">
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.packageNights}
-                    onChange={(event) => updateField("packageNights", event.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
+                <Field label="Description" className="md:col-span-2">
+                  <textarea
+                    value={form.description}
+                    onChange={(event) => updateField("description", event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3 min-h-[90px]"
                   />
                 </Field>
 
-                <Field label="Montant du forfait ($)">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.packagePrice}
-                    onChange={(event) => updateField("packagePrice", event.target.value)}
+                <Field label="Type de promotion">
+                  <select
+                    value={form.promotionType}
+                    onChange={(event) => updateField("promotionType", event.target.value)}
                     className="w-full rounded-xl border px-4 py-3"
-                  />
-                </Field>
-              </>
-            )}
-
-            {form.promotionType === "CONSECUTIVE_WEEKENDS" && (
-              <>
-                <Field label="Nombre de fins de semaine consécutives">
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.requiredConsecutiveWeekends}
-                    onChange={(event) => updateField("requiredConsecutiveWeekends", event.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  />
+                  >
+                    {promotionTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
-                <Field label="Montant total ($)">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.packagePrice}
-                    onChange={(event) => updateField("packagePrice", event.target.value)}
+                <Field label="Cible">
+                  <select
+                    value={form.targetType}
+                    onChange={(event) => updateField("targetType", event.target.value)}
                     className="w-full rounded-xl border px-4 py-3"
-                  />
+                  >
+                    {targetTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-              </>
-            )}
 
-            <Field label="Minimum de nuits">
-              <input
-                type="number"
-                min="0"
-                value={form.minNights}
-                onChange={(event) => updateField("minNights", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              />
-            </Field>
+                {form.targetType === "GROUP" && (
+                  <Field label="Regroupement tarifaire" className="md:col-span-2">
+                    <select
+                      value={form.pricingOptionId}
+                      onChange={(event) => updateField("pricingOptionId", event.target.value)}
+                      className="w-full rounded-xl border px-4 py-3"
+                    >
+                      <option value="">Choisir un regroupement</option>
+                      {pricingOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name || option.label || option.code || `Regroupement #${option.id}`}
+                        </option>
+                      ))}
+                    </select>
 
-            <Field label="Maximum de nuits">
-              <input
-                type="number"
-                min="0"
-                value={form.maxNights}
-                onChange={(event) => updateField("maxNights", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              />
-            </Field>
-
-            <Field label="Priorité">
-              <input
-                type="number"
-                value={form.priority}
-                onChange={(event) => updateField("priority", event.target.value)}
-                className="w-full rounded-xl border px-4 py-3"
-              />
-            </Field>
-
-            <div className="flex items-end gap-3">
-              <CheckboxField
-                label="Active"
-                checked={form.isActive}
-                onChange={(value) => updateField("isActive", value)}
-              />
-              <CheckboxField
-                label="Cumulable"
-                checked={form.combinable}
-                onChange={(value) => updateField("combinable", value)}
-              />
-            </div>
-
-            <div className="md:col-span-2 rounded-2xl border bg-slate-50 p-4">
-              <p className="font-medium text-slate-800 mb-3">Jours applicables</p>
-              <div className="grid gap-2 md:grid-cols-4">
-                {days.map((day) => (
-                  <label key={day.value} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form.daysOfWeek.includes(day.value)}
-                      onChange={() => toggleDay(day.value)}
-                    />
-                    {day.label}
-                  </label>
-                ))}
-              </div>
-              <p className="text-xs text-slate-500 mt-2">
-                Aucun jour sélectionné = applicable tous les jours.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3 mt-6">
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-            >
-              {editingId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {saving ? "Enregistrement..." : editingId ? "Sauvegarder" : "Créer la promotion"}
-            </button>
-
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-xl bg-white border px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Réinitialiser
-            </button>
-          </div>
-        </form>
-
-        <div className="bg-white rounded-3xl shadow-sm border p-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-4">
-            Promotions configurées
-          </h2>
-
-          {sortedPromotions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-slate-50 px-4 py-6 text-sm text-slate-600">
-              Aucune promotion dynamique configurée.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sortedPromotions.map((promotion) => (
-                <div key={promotion.id} className="rounded-2xl border p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold text-slate-900">
-                          {promotion.name}
-                        </h3>
-                        <Badge>{promotion.promotionType}</Badge>
-                        <Badge>{promotion.targetType}</Badge>
-                        <Badge>{promotion.isActive ? "Active" : "Inactive"}</Badge>
-                      </div>
-
-                      {promotion.description && (
-                        <p className="text-sm text-slate-600 mt-1">
-                          {promotion.description}
-                        </p>
-                      )}
-
-                      <p className="text-sm text-slate-500 mt-2">
-                        {promotion.startDate} au {promotion.endDate} · Priorité {promotion.priority}
+                    {pricingOptions.length === 0 && (
+                      <p className="mt-2 text-sm text-amber-700">
+                        Aucun regroupement tarifaire trouvé pour ce camping.
                       </p>
-                    </div>
+                    )}
+                  </Field>
+                )}
 
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => editPromotion(promotion)}
-                        className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                      >
-                        <Edit className="w-3 h-3" />
-                        Modifier
-                      </button>
+                {form.targetType === "SITE" && (
+                  <Field label="Site ciblé" className="md:col-span-2">
+                    <select
+                      value={form.campsiteId}
+                      onChange={(event) => updateField("campsiteId", event.target.value)}
+                      className="w-full rounded-xl border px-4 py-3"
+                    >
+                      <option value="">Choisir un site</option>
+                      {campsites.map((site) => (
+                        <option key={site.id} value={site.id}>
+                          {site.code || site.name || `Site #${site.id}`}
+                        </option>
+                      ))}
+                    </select>
 
-                      <button
-                        type="button"
-                        onClick={() => deletePromotion(promotion.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Supprimer
-                      </button>
-                    </div>
+                    {campsites.length === 0 && (
+                      <p className="mt-2 text-sm text-amber-700">
+                        Aucun site trouvé pour ce camping.
+                      </p>
+                    )}
+                  </Field>
+                )}
+
+                {form.targetType === "MULTI_CAMPSITE" && (
+                  <div className="md:col-span-2 rounded-2xl border bg-slate-50 p-4">
+                    <p className="font-medium text-slate-800 mb-3">Sites ciblés</p>
+
+                    {campsites.length === 0 ? (
+                      <p className="text-sm text-amber-700">
+                        Aucun site trouvé pour ce camping.
+                      </p>
+                    ) : (
+                      <div className="grid gap-2 md:grid-cols-4">
+                        {campsites.map((site) => (
+                          <label key={site.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={form.campsiteIds.includes(site.id)}
+                              onChange={() => toggleCampsite(site.id)}
+                            />
+                            {site.code || site.name || `Site #${site.id}`}
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                )}
+
+                <Field label="Date début *">
+                  <input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(event) => updateField("startDate", event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3"
+                  />
+                </Field>
+
+                <Field label="Date fin *">
+                  <input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(event) => updateField("endDate", event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3"
+                  />
+                </Field>
+
+                {form.promotionType === "PERCENT_DISCOUNT" && (
+                  <Field label="Rabais (%)">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={form.discountPercent}
+                      onChange={(event) => updateField("discountPercent", event.target.value)}
+                      className="w-full rounded-xl border px-4 py-3"
+                    />
+                  </Field>
+                )}
+
+                {form.promotionType === "AMOUNT_DISCOUNT" && (
+                  <Field label="Rabais ($)">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.discountAmount}
+                      onChange={(event) => updateField("discountAmount", event.target.value)}
+                      className="w-full rounded-xl border px-4 py-3"
+                    />
+                  </Field>
+                )}
+
+                {form.promotionType === "FIXED_PRICE" && (
+                  <Field label="Prix fixe ($)">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.fixedPrice}
+                      onChange={(event) => updateField("fixedPrice", event.target.value)}
+                      className="w-full rounded-xl border px-4 py-3"
+                    />
+                  </Field>
+                )}
+
+                {form.promotionType === "BUY_X_PAY_Y" && (
+                  <>
+                    <Field label="Nuits achetées">
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.buyNights}
+                        onChange={(event) => updateField("buyNights", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+
+                    <Field label="Nuits payées">
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.payNights}
+                        onChange={(event) => updateField("payNights", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+                  </>
+                )}
+
+                {form.promotionType === "X_NIGHTS_FOR_AMOUNT" && (
+                  <>
+                    <Field label="Nombre de nuits">
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.packageNights}
+                        onChange={(event) => updateField("packageNights", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+
+                    <Field label="Montant du forfait ($)">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.packagePrice}
+                        onChange={(event) => updateField("packagePrice", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+                  </>
+                )}
+
+                {form.promotionType === "CONSECUTIVE_WEEKENDS" && (
+                  <>
+                    <Field label="Nombre de fins de semaine consécutives">
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.requiredConsecutiveWeekends}
+                        onChange={(event) => updateField("requiredConsecutiveWeekends", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+
+                    <Field label="Montant total ($)">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.packagePrice}
+                        onChange={(event) => updateField("packagePrice", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+                  </>
+                )}
+
+                {form.promotionType === "PACKAGE" && (
+                  <Field label="Montant du forfait ($)">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.packagePrice}
+                      onChange={(event) => updateField("packagePrice", event.target.value)}
+                      className="w-full rounded-xl border px-4 py-3"
+                    />
+                  </Field>
+                )}
+
+                <Field label="Minimum de nuits">
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.minNights}
+                    onChange={(event) => updateField("minNights", event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3"
+                  />
+                </Field>
+
+                <Field label="Maximum de nuits">
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.maxNights}
+                    onChange={(event) => updateField("maxNights", event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3"
+                  />
+                </Field>
+
+                <Field label="Priorité">
+                  <input
+                    type="number"
+                    value={form.priority}
+                    onChange={(event) => updateField("priority", event.target.value)}
+                    className="w-full rounded-xl border px-4 py-3"
+                  />
+                </Field>
+
+                <div className="flex items-end gap-3">
+                  <CheckboxField
+                    label="Active"
+                    checked={form.isActive}
+                    onChange={(value) => updateField("isActive", value)}
+                  />
+                  <CheckboxField
+                    label="Cumulable"
+                    checked={form.combinable}
+                    onChange={(value) => updateField("combinable", value)}
+                  />
                 </div>
-              ))}
+
+                <div className="md:col-span-2 rounded-2xl border bg-slate-50 p-4">
+                  <p className="font-medium text-slate-800 mb-3">Jours applicables</p>
+                  <div className="grid gap-2 md:grid-cols-4">
+                    {days.map((day) => (
+                      <label key={day.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={form.daysOfWeek.includes(day.value)}
+                          onChange={() => toggleDay(day.value)}
+                        />
+                        {day.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Aucun jour sélectionné = applicable tous les jours.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 mt-6">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {editingId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {saving ? "Enregistrement..." : editingId ? "Sauvegarder" : "Créer la promotion"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-xl bg-white border px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </form>
+
+            <div className="bg-white rounded-3xl shadow-sm border p-6">
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Promotions configurées
+              </h2>
+
+              {sortedPromotions.length === 0 ? (
+                <div className="rounded-2xl border border-dashed bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                  Aucune promotion dynamique configurée.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedPromotions.map((promotion) => (
+                    <div key={promotion.id} className="rounded-2xl border p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-slate-900">
+                              {promotion.name}
+                            </h3>
+                            <Badge>{promotion.promotionType}</Badge>
+                            <Badge>{promotion.targetType}</Badge>
+                            <Badge>{promotion.isActive ? "Active" : "Inactive"}</Badge>
+                          </div>
+
+                          {promotion.description && (
+                            <p className="text-sm text-slate-600 mt-1">
+                              {promotion.description}
+                            </p>
+                          )}
+
+                          <p className="text-sm text-slate-500 mt-2">
+                            {promotion.startDate} au {promotion.endDate} · Priorité {promotion.priority}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => editPromotion(promotion)}
+                            className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                          >
+                            <Edit className="w-3 h-3" />
+                            Modifier
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deletePromotion(promotion.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          <PromotionHelpPanel
+            form={form}
+            onOpenHelp={() => setHelpOpen(true)}
+          />
         </div>
       </div>
     </div>

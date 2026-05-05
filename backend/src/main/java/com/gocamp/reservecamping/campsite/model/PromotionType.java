@@ -1,9 +1,9 @@
 // ============================================================
-// Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/model/PromotionType.java
-// Dernière modification : 2026-04-20
+// Fichier : PromotionType.java
+// Dernière modification : 2026-05-04
 //
 // Résumé :
-// - Types de promotions ponctuelles supportés
+// - Types de promotions dynamiques supportés
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.model;
@@ -11,5 +11,10 @@ package com.gocamp.reservecamping.campsite.model;
 public enum PromotionType {
     FIXED_PRICE,
     PERCENT_DISCOUNT,
-    BUY_X_PAY_Y
+    BUY_X_PAY_Y,
+    AMOUNT_DISCOUNT,
+    X_NIGHTS_FOR_AMOUNT,
+    CONSECUTIVE_WEEKENDS,
+    PACKAGE,
+    OTHER
 }

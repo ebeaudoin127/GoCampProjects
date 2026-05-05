@@ -3,7 +3,7 @@
 // Dernière modification : 2026-05-04
 //
 // Résumé :
-// - Repository des associations promotion ↔ sites
+// - Repository des associations promotion tarifaire ↔ sites
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.repository;

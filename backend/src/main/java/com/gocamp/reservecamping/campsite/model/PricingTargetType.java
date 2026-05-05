@@ -1,14 +1,17 @@
 // ============================================================
-// Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/model/PricingTargetType.java
-// Dernière modification : 2026-04-20
+// Fichier : PricingTargetType.java
+// Dernière modification : 2026-05-04
 //
 // Résumé :
-// - Type de cible d’une règle tarifaire
+// - Types de cibles pour les règles tarifaires et promotions
+// - Supporte site, regroupement, tout le camping et multi-sites
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.model;
 
 public enum PricingTargetType {
     SITE,
-    GROUP
+    GROUP,
+    ALL_CAMPGROUND,
+    MULTI_CAMPSITE
 }

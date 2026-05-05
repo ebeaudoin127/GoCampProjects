@@ -1,4 +1,3 @@
-
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/model/PricingPromotion.java
 // Dernière modification : 2026-05-04

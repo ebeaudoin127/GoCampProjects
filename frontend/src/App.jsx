@@ -1,13 +1,11 @@
-
 // ============================================================
 // Fichier : frontend/src/App.jsx
 // Dernière modification : 2026-05-04
 //
 // Résumé des modifications :
-// - Ajout de la route carte du camping
-// - Ajout de la route du wizard "Établir la tarification"
-// - Ajout de la route des règles tarifaires d’un site précis
-// - Ajout de la route de gestion des promotions marketing d’un camping
+// - Ajout gestion promotions marketing
+// - Ajout gestion promotions dynamiques (pricing)
+// - Correction conflit de routes (IMPORTANT)
 // ============================================================
 
 import React from "react";
@@ -27,7 +25,9 @@ import SiteUsersPage from "./pages/admin/SiteUsersPage";
 import SiteCampgroundsPage from "./pages/admin/SiteCampgroundsPage";
 import CreateCampgroundPage from "./pages/admin/CreateCampgroundPage";
 import EditCampgroundPage from "./pages/admin/EditCampgroundPage";
+
 import CampgroundPromotionsPage from "./pages/admin/CampgroundPromotionsPage";
+import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 
 import CampsitesPage from "./pages/admin/CampsitesPage";
 import CreateCampsitePage from "./pages/admin/CreateCampsitePage";
@@ -35,7 +35,6 @@ import EditCampsitePage from "./pages/admin/EditCampsitePage";
 import CampgroundMapPage from "./pages/admin/CampgroundMapPage";
 import CampgroundPricingWizardPage from "./pages/admin/CampgroundPricingWizardPage";
 import CampsitePricingRulesPage from "./pages/admin/CampsitePricingRulesPage";
-import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 
 function ScrollToTop() {
   React.useEffect(() => {
@@ -123,6 +122,9 @@ function AppRoutes() {
         }
       />
 
+      {/* ============================= */}
+      {/* PROMOTIONS MARKETING */}
+      {/* ============================= */}
       <Route
         path="/site-manager/campgrounds/:campgroundId/promotions"
         element={
@@ -132,6 +134,21 @@ function AppRoutes() {
         }
       />
 
+      {/* ============================= */}
+      {/* PROMOTIONS DYNAMIQUES (PRICING) */}
+      {/* ============================= */}
+      <Route
+        path="/site-manager/campgrounds/:campgroundId/pricing-promotions"
+        element={
+          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+            <PricingPromotionsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ============================= */}
+      {/* SITES */}
+      {/* ============================= */}
       <Route
         path="/site-manager/campgrounds/:campgroundId/sites"
         element={
@@ -168,6 +185,9 @@ function AppRoutes() {
         }
       />
 
+      {/* ============================= */}
+      {/* MAP & PRICING */}
+      {/* ============================= */}
       <Route
         path="/site-manager/campgrounds/:campgroundId/map"
         element={
@@ -186,20 +206,14 @@ function AppRoutes() {
         }
       />
 
+      {/* ============================= */}
+      {/* CAMPING MANAGER */}
+      {/* ============================= */}
       <Route
         path="/camping-manager"
         element={
           <ProtectedRoute allowedRoles={["SUPER_ADMIN", "CAMPING_ADMIN", "GESTIONNAIRE"]}>
             <CampingManagerHome />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/site-manager/campgrounds/:campgroundId/promotions"
-        element={
-          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
-            <PricingPromotionsPage />
           </ProtectedRoute>
         }
       />

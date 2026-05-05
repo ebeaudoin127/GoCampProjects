@@ -3,7 +3,8 @@
 // Dernière modification : 2026-05-04
 //
 // Résumé :
-// - Association entre une promotion tarifaire et plusieurs sites
+// - Association entre une promotion tarifaire dynamique et plusieurs sites
+// - Permet les promotions ciblant une sélection précise de sites
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.model;
@@ -18,6 +19,10 @@ import jakarta.persistence.*;
                         name = "uq_pricing_promotion_campsite",
                         columnNames = {"pricing_promotion_id", "campsite_id"}
                 )
+        },
+        indexes = {
+                @Index(name = "idx_ppc_promotion", columnList = "pricing_promotion_id"),
+                @Index(name = "idx_ppc_campsite", columnList = "campsite_id")
         }
 )
 public class PricingPromotionCampsite {
@@ -26,11 +31,11 @@ public class PricingPromotionCampsite {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "pricing_promotion_id", nullable = false)
     private PricingPromotion pricingPromotion;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "campsite_id", nullable = false)
     private Campsite campsite;
 
