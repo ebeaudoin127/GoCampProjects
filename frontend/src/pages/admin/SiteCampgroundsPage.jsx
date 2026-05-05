@@ -1,11 +1,10 @@
 // ============================================================
 // Fichier : frontend/src/pages/admin/SiteCampgroundsPage.jsx
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - Liste des campings
-// - Ajout du bouton "Gérer les sites"
-// - Ajout du bouton "Promotions"
+// - Boutons : Sites, Promotions, Calculateur, Modifier
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -18,6 +17,7 @@ import {
   Search,
   MapPinned,
   BadgePercent,
+  Calculator,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
@@ -72,6 +72,7 @@ export default function SiteCampgroundsPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-6 py-10">
+        {/* HEADER */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
             <Link
@@ -118,6 +119,7 @@ export default function SiteCampgroundsPage() {
           </div>
         </div>
 
+        {/* SEARCH */}
         <div className="bg-white rounded-3xl shadow-sm border p-6 mb-6">
           <div className="relative max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -137,28 +139,33 @@ export default function SiteCampgroundsPage() {
           )}
         </div>
 
+        {/* TABLE */}
         <div className="bg-white rounded-3xl shadow-sm border overflow-hidden">
           {loading ? (
-            <div className="p-8 text-slate-600">Chargement des campings...</div>
+            <div className="p-8 text-slate-600">
+              Chargement des campings...
+            </div>
           ) : filteredCampgrounds.length === 0 ? (
-            <div className="p-8 text-slate-600">Aucun camping trouvé.</div>
+            <div className="p-8 text-slate-600">
+              Aucun camping trouvé.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-slate-700">
                   <tr>
-                    <th className="text-left px-4 py-3 font-semibold">ID</th>
-                    <th className="text-left px-4 py-3 font-semibold">Nom</th>
-                    <th className="text-left px-4 py-3 font-semibold">Ville</th>
-                    <th className="text-left px-4 py-3 font-semibold">Province/État</th>
-                    <th className="text-left px-4 py-3 font-semibold">Pays</th>
-                    <th className="text-left px-4 py-3 font-semibold">Téléphone</th>
-                    <th className="text-left px-4 py-3 font-semibold">Courriel</th>
-                    <th className="text-left px-4 py-3 font-semibold">Sites</th>
-                    <th className="text-left px-4 py-3 font-semibold">Wi-Fi</th>
-                    <th className="text-left px-4 py-3 font-semibold">Hivernal</th>
-                    <th className="text-left px-4 py-3 font-semibold">Actif</th>
-                    <th className="text-left px-4 py-3 font-semibold">Actions</th>
+                    <th className="px-4 py-3 text-left font-semibold">ID</th>
+                    <th className="px-4 py-3 text-left font-semibold">Nom</th>
+                    <th className="px-4 py-3 text-left font-semibold">Ville</th>
+                    <th className="px-4 py-3 text-left font-semibold">Province/État</th>
+                    <th className="px-4 py-3 text-left font-semibold">Pays</th>
+                    <th className="px-4 py-3 text-left font-semibold">Téléphone</th>
+                    <th className="px-4 py-3 text-left font-semibold">Courriel</th>
+                    <th className="px-4 py-3 text-left font-semibold">Sites</th>
+                    <th className="px-4 py-3 text-left font-semibold">Wi-Fi</th>
+                    <th className="px-4 py-3 text-left font-semibold">Hivernal</th>
+                    <th className="px-4 py-3 text-left font-semibold">Actif</th>
+                    <th className="px-4 py-3 text-left font-semibold">Actions</th>
                   </tr>
                 </thead>
 
@@ -166,15 +173,29 @@ export default function SiteCampgroundsPage() {
                   {filteredCampgrounds.map((c) => (
                     <tr key={c.id} className="border-t border-slate-200">
                       <td className="px-4 py-3">{c.id}</td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{c.name}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">
+                        {c.name}
+                      </td>
                       <td className="px-4 py-3">{c.city || "-"}</td>
-                      <td className="px-4 py-3">{c.provinceStateName || "-"}</td>
-                      <td className="px-4 py-3">{c.countryName || "-"}</td>
-                      <td className="px-4 py-3">{c.phoneMain || "-"}</td>
+                      <td className="px-4 py-3">
+                        {c.provinceStateName || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.countryName || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.phoneMain || "-"}
+                      </td>
                       <td className="px-4 py-3">{c.email || "-"}</td>
-                      <td className="px-4 py-3">{c.totalSites ?? 0}</td>
-                      <td className="px-4 py-3">{c.hasWifi ? "Oui" : "Non"}</td>
-                      <td className="px-4 py-3">{c.isWinterCamping ? "Oui" : "Non"}</td>
+                      <td className="px-4 py-3">
+                        {c.totalSites ?? 0}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.hasWifi ? "Oui" : "Non"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {c.isWinterCamping ? "Oui" : "Non"}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 font-medium ${
@@ -186,16 +207,21 @@ export default function SiteCampgroundsPage() {
                           {c.isActive ? "Actif" : "Inactif"}
                         </span>
                       </td>
+
+                      {/* ACTIONS */}
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
+
+                          {/* SITES */}
                           <Link
                             to={`/site-manager/campgrounds/${c.id}/sites`}
                             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                           >
                             <MapPinned className="w-4 h-4" />
-                            Gérer les sites
+                            Sites
                           </Link>
 
+                          {/* PROMOTIONS */}
                           <Link
                             to={`/site-manager/campgrounds/${c.id}/pricing-promotions`}
                             className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700"
@@ -204,6 +230,16 @@ export default function SiteCampgroundsPage() {
                             Promotions
                           </Link>
 
+                          {/* CALCULATEUR 🔥 */}
+                          <Link
+                            to={`/site-manager/campgrounds/${c.id}/price-calculator`}
+                            className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+                          >
+                            <Calculator className="w-4 h-4" />
+                            Calculateur
+                          </Link>
+
+                          {/* EDIT */}
                           <Link
                             to={`/site-manager/campgrounds/${c.id}/edit`}
                             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-white hover:bg-slate-800"
@@ -211,6 +247,7 @@ export default function SiteCampgroundsPage() {
                             <Pencil className="w-4 h-4" />
                             Modifier
                           </Link>
+
                         </div>
                       </td>
                     </tr>
