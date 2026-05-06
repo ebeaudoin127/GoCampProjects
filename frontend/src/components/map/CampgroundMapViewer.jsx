@@ -1,16 +1,18 @@
+
 // ============================================================
 // Fichier : frontend/src/components/map/CampgroundMapViewer.jsx
-// Dernière modification : 2026-04-29
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - Zoom/pan fluide
 // - Coordonnées indépendantes du zoom
-// - Snap léger aux 5 pixels
-// - Sélection visuelle d’un site
+// - Snap précis aux 1 pixel
+// - Sélection visuelle d’un site plus claire et subtile
 // - Popup fixe au clic avec bouton fermer
 // - Hover seulement visuel, sans popup qui suit la souris
 // - Double-clic sur site = modifier
 // - Mode édition : ajout, déplacement et suppression de points
+// - Traits de sélection et de dessin moins épais
 // - Correction du tri naturel des codes de site : 1,2,10 / A101,A102
 // ============================================================
 
@@ -25,7 +27,7 @@ import {
   X,
 } from "lucide-react";
 
-const SNAP_SIZE = 5;
+const SNAP_SIZE = 1;
 
 function snap(value) {
   return Math.round(value / SNAP_SIZE) * SNAP_SIZE;
@@ -525,14 +527,14 @@ export default function CampgroundMapViewer({
                     <g key={`element-${element.id}`}>
                       <polygon
                         points={points}
-                        className={`cursor-pointer stroke-[2] ${
+                        className={`cursor-pointer stroke-[1.5] ${
                           isPopupOpen
-                            ? "fill-emerald-400/55 stroke-emerald-800"
+                            ? "fill-emerald-400/45 stroke-emerald-800"
                             : isHovered
-                            ? "fill-emerald-400/45 stroke-emerald-700"
+                            ? "fill-emerald-400/35 stroke-emerald-700"
                             : element.isActive
-                            ? "fill-emerald-300/35 stroke-emerald-700 hover:fill-emerald-400/45"
-                            : "fill-slate-300/30 stroke-slate-600 hover:fill-slate-400/35"
+                            ? "fill-emerald-300/25 stroke-emerald-700 hover:fill-emerald-400/35"
+                            : "fill-slate-300/25 stroke-slate-600 hover:fill-slate-400/30"
                         }`}
                         onMouseEnter={() => setHoveredElement(element)}
                         onMouseLeave={() => setHoveredElement(null)}
@@ -572,14 +574,14 @@ export default function CampgroundMapViewer({
                     <g key={`site-${site.id}`}>
                       <polygon
                         points={points}
-                        className={`cursor-pointer transition-all stroke-[2] ${
+                        className={`cursor-pointer transition-all ${
                           isSelected || isPopupOpen
-                            ? "fill-amber-300/55 stroke-amber-700"
+                            ? "fill-sky-300/35 stroke-sky-700 stroke-[1.5]"
                             : isHovered
-                            ? "fill-orange-300/45 stroke-orange-700"
+                            ? "fill-orange-300/35 stroke-orange-700 stroke-[1.25]"
                             : site.isActive
-                            ? "fill-blue-300/35 stroke-blue-700 hover:fill-blue-400/45"
-                            : "fill-slate-300/35 stroke-slate-700 hover:fill-slate-400/45"
+                            ? "fill-blue-300/25 stroke-blue-700 hover:fill-blue-400/35 stroke-[1.15]"
+                            : "fill-slate-300/30 stroke-slate-700 hover:fill-slate-400/35 stroke-[1.15]"
                         }`}
                         onMouseEnter={() => setHoveredSite(site)}
                         onMouseLeave={() => setHoveredSite(null)}
@@ -598,9 +600,9 @@ export default function CampgroundMapViewer({
                       {(isSelected || isPopupOpen) && (
                         <polygon
                           points={points}
-                          fill="none"
-                          stroke="#f59e0b"
-                          strokeWidth="5"
+                          fill="rgba(125, 211, 252, 0.16)"
+                          stroke="#0284c7"
+                          strokeWidth="2"
                           pointerEvents="none"
                         />
                       )}
@@ -627,16 +629,16 @@ export default function CampgroundMapViewer({
                       points={pointsToSvg(draftPoints)}
                       fill="none"
                       stroke="#ef4444"
-                      strokeWidth="3"
+                      strokeWidth="1.5"
                       pointerEvents="none"
                     />
 
                     {draftPoints.length >= 3 && (
                       <polygon
                         points={pointsToSvg(draftPoints)}
-                        fill="rgba(239,68,68,0.25)"
+                        fill="rgba(239,68,68,0.14)"
                         stroke="#ef4444"
-                        strokeWidth="3"
+                        strokeWidth="1.5"
                         pointerEvents="none"
                       />
                     )}
@@ -646,10 +648,10 @@ export default function CampgroundMapViewer({
                         <circle
                           cx={point.x}
                           cy={point.y}
-                          r="8"
+                          r="6"
                           fill="#ef4444"
                           stroke="#ffffff"
-                          strokeWidth="2"
+                          strokeWidth="1.5"
                           className="cursor-move"
                           onMouseDown={(e) =>
                             handleDraftPointMouseDown(e, index)
@@ -663,9 +665,9 @@ export default function CampgroundMapViewer({
 
                         <text
                           x={point.x}
-                          y={point.y - 14}
+                          y={point.y - 12}
                           textAnchor="middle"
-                          className="fill-red-700 text-[12px] font-bold pointer-events-none"
+                          className="fill-red-700 text-[11px] font-bold pointer-events-none"
                         >
                           {index + 1}
                         </text>
@@ -678,7 +680,7 @@ export default function CampgroundMapViewer({
                         y={draftCenter.y}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="fill-red-800 text-[16px] font-extrabold pointer-events-none"
+                        className="fill-red-800 text-[14px] font-extrabold pointer-events-none"
                       >
                         Brouillon
                       </text>
