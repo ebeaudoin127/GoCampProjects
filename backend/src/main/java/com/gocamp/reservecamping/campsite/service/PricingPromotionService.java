@@ -1,13 +1,14 @@
 // ============================================================
 // Fichier : PricingPromotionService.java
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-05
+// Auteur : ChatGPT
 //
 // Résumé :
-// - Gestion des promotions dynamiques
+// - Gestion des promotions tarifaires dynamiques
 // - Création / modification / suppression / lecture
-// - Supporte camping complet, regroupement tarifaire, site unique et multi-sites
-// - Supporte %, montant fixe, prix fixe, nuits achetées/payées,
-//   forfait X nuits pour X montant, fins de semaine consécutives
+// - Supporte SITE, GROUP, MULTI_CAMPSITE et ALL_CAMPGROUND
+// - Supporte promo code, early booking, last minute,
+//   jour d’arrivée obligatoire et fins de semaine consécutives
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.service;
@@ -16,6 +17,7 @@ import com.gocamp.reservecamping.campground.repository.CampgroundRepository;
 import com.gocamp.reservecamping.campsite.dto.CreatePricingPromotionRequest;
 import com.gocamp.reservecamping.campsite.dto.PricingPromotionResponse;
 import com.gocamp.reservecamping.campsite.model.Campsite;
+import com.gocamp.reservecamping.campsite.model.CampgroundSitePricingOption;
 import com.gocamp.reservecamping.campsite.model.PricingDayOfWeek;
 import com.gocamp.reservecamping.campsite.model.PricingPromotion;
 import com.gocamp.reservecamping.campsite.model.PricingPromotionCampsite;
@@ -30,7 +32,6 @@ import com.gocamp.reservecamping.campsite.repository.PricingPromotionRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -60,46 +61,39 @@ public class PricingPromotionService {
         this.pricingOptionRepository = pricingOptionRepository;
     }
 
-    // ============================================================
-    // CRÉATION
-    // ============================================================
     public PricingPromotionResponse create(CreatePricingPromotionRequest req) {
-        validateRequest(req);
+        validate(req);
 
         PricingPromotion promo = new PricingPromotion();
-
-        applyRequestToPromotion(promo, req);
+        applyRequestToEntity(promo, req);
 
         promotionRepository.save(promo);
 
-        replaceDays(promo, req.days());
-        replaceTargetCampsites(promo, req.campsiteIds());
+        saveDays(promo, req.days());
+        saveMultiCampsites(promo, req.campsiteIds());
 
         return map(promo);
     }
 
-    // ============================================================
-    // MODIFICATION
-    // ============================================================
     public PricingPromotionResponse update(Long id, CreatePricingPromotionRequest req) {
-        validateRequest(req);
+        validate(req);
 
         PricingPromotion promo = promotionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Promotion introuvable"));
 
-        applyRequestToPromotion(promo, req);
+        applyRequestToEntity(promo, req);
 
         promotionRepository.save(promo);
 
-        replaceDays(promo, req.days());
-        replaceTargetCampsites(promo, req.campsiteIds());
+        dayRepository.deleteByPricingPromotionId(promo.getId());
+        promotionCampsiteRepository.deleteByPricingPromotionId(promo.getId());
+
+        saveDays(promo, req.days());
+        saveMultiCampsites(promo, req.campsiteIds());
 
         return map(promo);
     }
 
-    // ============================================================
-    // LECTURE
-    // ============================================================
     public List<PricingPromotionResponse> getByCampground(Long campgroundId) {
         return promotionRepository
                 .findByCampgroundIdOrderByPriorityAscStartDateAscEndDateAsc(campgroundId)
@@ -108,17 +102,13 @@ public class PricingPromotionService {
                 .toList();
     }
 
-    // ============================================================
-    // SUPPRESSION
-    // ============================================================
     public void delete(Long id) {
+        dayRepository.deleteByPricingPromotionId(id);
+        promotionCampsiteRepository.deleteByPricingPromotionId(id);
         promotionRepository.deleteById(id);
     }
 
-    // ============================================================
-    // MAPPING REQUEST -> ENTITY
-    // ============================================================
-    private void applyRequestToPromotion(PricingPromotion promo, CreatePricingPromotionRequest req) {
+    private void applyRequestToEntity(PricingPromotion promo, CreatePricingPromotionRequest req) {
         promo.setCampground(
                 campgroundRepository.findById(req.campgroundId())
                         .orElseThrow(() -> new RuntimeException("Camping introuvable"))
@@ -131,24 +121,25 @@ public class PricingPromotionService {
         promo.setCampsite(null);
         promo.setPricingOption(null);
 
-        if (req.targetType() == PricingTargetType.SITE) {
-            promo.setCampsite(
-                    campsiteRepository.findById(req.campsiteId())
-                            .orElseThrow(() -> new RuntimeException("Site introuvable"))
-            );
+        if (req.targetType() == PricingTargetType.SITE && req.campsiteId() != null) {
+            Campsite campsite = campsiteRepository.findById(req.campsiteId())
+                    .orElseThrow(() -> new RuntimeException("Site introuvable"));
+
+            promo.setCampsite(campsite);
         }
 
-        if (req.targetType() == PricingTargetType.GROUP) {
-            promo.setPricingOption(
-                    pricingOptionRepository.findById(req.pricingOptionId())
-                            .orElseThrow(() -> new RuntimeException("Option tarifaire invalide"))
-            );
+        if (req.targetType() == PricingTargetType.GROUP && req.pricingOptionId() != null) {
+            CampgroundSitePricingOption option = pricingOptionRepository.findById(req.pricingOptionId())
+                    .orElseThrow(() -> new RuntimeException("Regroupement tarifaire introuvable"));
+
+            promo.setPricingOption(option);
         }
 
         promo.setStartDate(req.startDate());
         promo.setEndDate(req.endDate());
-        promo.setName(req.name().trim());
-        promo.setDescription(trimToNull(req.description()));
+
+        promo.setName(req.name());
+        promo.setDescription(req.description());
 
         promo.setFixedPrice(req.fixedPrice());
         promo.setDiscountPercent(req.discountPercent());
@@ -168,32 +159,28 @@ public class PricingPromotionService {
         promo.setPriority(req.priority() != null ? req.priority() : 100);
         promo.setCombinable(req.combinable() != null && req.combinable());
         promo.setActive(req.isActive() == null || req.isActive());
+
+        promo.setPromoCode(normalizePromoCode(req.promoCode()));
+        promo.setRequiresPromoCode(req.requiresPromoCode() != null && req.requiresPromoCode());
+        promo.setBookingBeforeDate(req.bookingBeforeDate());
+        promo.setArrivalWithinDays(req.arrivalWithinDays());
+        promo.setRequiredArrivalDay(req.requiredArrivalDay());
     }
 
-    // ============================================================
-    // JOURS APPLICABLES
-    // ============================================================
-    private void replaceDays(PricingPromotion promo, List<PricingDayOfWeek> days) {
-        dayRepository.deleteByPricingPromotionId(promo.getId());
-
+    private void saveDays(PricingPromotion promo, List<PricingDayOfWeek> days) {
         if (days == null || days.isEmpty()) {
             return;
         }
 
         for (PricingDayOfWeek day : days) {
-            PricingPromotionDay entity = new PricingPromotionDay();
-            entity.setPricingPromotion(promo);
-            entity.setDayOfWeek(day);
-            dayRepository.save(entity);
+            PricingPromotionDay promotionDay = new PricingPromotionDay();
+            promotionDay.setPricingPromotion(promo);
+            promotionDay.setDayOfWeek(day);
+            dayRepository.save(promotionDay);
         }
     }
 
-    // ============================================================
-    // CIBLES MULTI-SITES
-    // ============================================================
-    private void replaceTargetCampsites(PricingPromotion promo, List<Long> campsiteIds) {
-        promotionCampsiteRepository.deleteByPricingPromotionId(promo.getId());
-
+    private void saveMultiCampsites(PricingPromotion promo, List<Long> campsiteIds) {
         if (promo.getTargetType() != PricingTargetType.MULTI_CAMPSITE) {
             return;
         }
@@ -214,139 +201,6 @@ public class PricingPromotionService {
         }
     }
 
-    // ============================================================
-    // VALIDATION
-    // ============================================================
-    private void validateRequest(CreatePricingPromotionRequest req) {
-        if (req == null) {
-            throw new RuntimeException("La requête est obligatoire.");
-        }
-
-        if (req.campgroundId() == null) {
-            throw new RuntimeException("Le camping est obligatoire.");
-        }
-
-        if (req.targetType() == null) {
-            throw new RuntimeException("Le type de cible est obligatoire.");
-        }
-
-        if (req.applicationMode() == null) {
-            throw new RuntimeException("Le mode d'application est obligatoire.");
-        }
-
-        if (req.promotionType() == null) {
-            throw new RuntimeException("Le type de promotion est obligatoire.");
-        }
-
-        if (req.name() == null || req.name().trim().isEmpty()) {
-            throw new RuntimeException("Le nom de la promotion est obligatoire.");
-        }
-
-        if (req.startDate() == null) {
-            throw new RuntimeException("La date de début est obligatoire.");
-        }
-
-        if (req.endDate() == null) {
-            throw new RuntimeException("La date de fin est obligatoire.");
-        }
-
-        if (req.endDate().isBefore(req.startDate())) {
-            throw new RuntimeException("La date de fin doit être après ou égale à la date de début.");
-        }
-
-        validateTarget(req);
-        validatePromotionType(req);
-        validateNights(req);
-    }
-
-    private void validateTarget(CreatePricingPromotionRequest req) {
-        if (req.targetType() == PricingTargetType.SITE && req.campsiteId() == null) {
-            throw new RuntimeException("Un site doit être sélectionné pour une promotion ciblant un site.");
-        }
-
-        if (req.targetType() == PricingTargetType.GROUP && req.pricingOptionId() == null) {
-            throw new RuntimeException("Un regroupement tarifaire doit être sélectionné.");
-        }
-
-        if (req.targetType() == PricingTargetType.MULTI_CAMPSITE
-                && (req.campsiteIds() == null || req.campsiteIds().isEmpty())) {
-            throw new RuntimeException("Au moins un site doit être sélectionné pour une promotion multi-sites.");
-        }
-    }
-
-    private void validatePromotionType(CreatePricingPromotionRequest req) {
-        PromotionType type = req.promotionType();
-
-        if (type == PromotionType.PERCENT_DISCOUNT) {
-            requirePositiveDecimal(req.discountPercent(), "Le pourcentage de rabais est obligatoire.");
-            if (req.discountPercent().compareTo(BigDecimal.valueOf(100)) > 0) {
-                throw new RuntimeException("Le pourcentage de rabais ne peut pas dépasser 100%.");
-            }
-        }
-
-        if (type == PromotionType.AMOUNT_DISCOUNT) {
-            requirePositiveDecimal(req.discountAmount(), "Le montant du rabais est obligatoire.");
-        }
-
-        if (type == PromotionType.FIXED_PRICE) {
-            requirePositiveDecimal(req.fixedPrice(), "Le prix fixe est obligatoire.");
-        }
-
-        if (type == PromotionType.BUY_X_PAY_Y) {
-            requirePositiveInteger(req.buyNights(), "Le nombre de nuits achetées est obligatoire.");
-            requirePositiveInteger(req.payNights(), "Le nombre de nuits payées est obligatoire.");
-
-            if (req.buyNights() <= req.payNights()) {
-                throw new RuntimeException("Les nuits achetées doivent être plus grandes que les nuits payées.");
-            }
-        }
-
-        if (type == PromotionType.X_NIGHTS_FOR_AMOUNT) {
-            requirePositiveInteger(req.packageNights(), "Le nombre de nuits du forfait est obligatoire.");
-            requirePositiveDecimal(req.packagePrice(), "Le prix du forfait est obligatoire.");
-        }
-
-        if (type == PromotionType.CONSECUTIVE_WEEKENDS) {
-            requirePositiveInteger(req.requiredConsecutiveWeekends(), "Le nombre de fins de semaine consécutives est obligatoire.");
-            requirePositiveDecimal(req.packagePrice(), "Le prix du forfait est obligatoire.");
-        }
-
-        if (type == PromotionType.PACKAGE) {
-            requirePositiveDecimal(req.packagePrice(), "Le prix du forfait est obligatoire.");
-        }
-    }
-
-    private void validateNights(CreatePricingPromotionRequest req) {
-        if (req.minNights() != null && req.minNights() < 0) {
-            throw new RuntimeException("Le minimum de nuits ne peut pas être négatif.");
-        }
-
-        if (req.maxNights() != null && req.maxNights() < 0) {
-            throw new RuntimeException("Le maximum de nuits ne peut pas être négatif.");
-        }
-
-        if (req.minNights() != null
-                && req.maxNights() != null
-                && req.maxNights() < req.minNights()) {
-            throw new RuntimeException("Le maximum de nuits doit être supérieur ou égal au minimum de nuits.");
-        }
-    }
-
-    private void requirePositiveDecimal(BigDecimal value, String message) {
-        if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException(message);
-        }
-    }
-
-    private void requirePositiveInteger(Integer value, String message) {
-        if (value == null || value <= 0) {
-            throw new RuntimeException(message);
-        }
-    }
-
-    // ============================================================
-    // MAPPING ENTITY -> RESPONSE
-    // ============================================================
     private PricingPromotionResponse map(PricingPromotion p) {
         List<PricingDayOfWeek> days = dayRepository.findByPricingPromotionId(p.getId())
                 .stream()
@@ -383,16 +237,142 @@ public class PricingPromotionService {
                 p.getPriority(),
                 p.isCombinable(),
                 p.isActive(),
+                p.getPromoCode(),
+                p.isRequiresPromoCode(),
+                p.getBookingBeforeDate(),
+                p.getArrivalWithinDays(),
+                p.getRequiredArrivalDay(),
                 days
         );
     }
 
-    private String trimToNull(String value) {
-        if (value == null) {
+    private void validate(CreatePricingPromotionRequest req) {
+        if (req == null) {
+            throw new RuntimeException("La requête est obligatoire");
+        }
+
+        if (req.campgroundId() == null) {
+            throw new RuntimeException("Le camping est obligatoire");
+        }
+
+        if (req.name() == null || req.name().isBlank()) {
+            throw new RuntimeException("Le nom de la promotion est obligatoire");
+        }
+
+        if (req.targetType() == null) {
+            throw new RuntimeException("La cible de la promotion est obligatoire");
+        }
+
+        if (req.applicationMode() == null) {
+            throw new RuntimeException("Le mode d'application est obligatoire");
+        }
+
+        if (req.promotionType() == null) {
+            throw new RuntimeException("Le type de promotion est obligatoire");
+        }
+
+        if (req.startDate() == null || req.endDate() == null) {
+            throw new RuntimeException("Les dates de promotion sont obligatoires");
+        }
+
+        if (req.endDate().isBefore(req.startDate())) {
+            throw new RuntimeException("La date de fin doit être après ou égale à la date de début");
+        }
+
+        if (req.targetType() == PricingTargetType.SITE && req.campsiteId() == null) {
+            throw new RuntimeException("Un site doit être sélectionné pour une promotion de type SITE");
+        }
+
+        if (req.targetType() == PricingTargetType.GROUP && req.pricingOptionId() == null) {
+            throw new RuntimeException("Un regroupement tarifaire doit être sélectionné pour une promotion de type GROUP");
+        }
+
+        if (req.targetType() == PricingTargetType.MULTI_CAMPSITE
+                && (req.campsiteIds() == null || req.campsiteIds().isEmpty())) {
+            throw new RuntimeException("Au moins un site doit être sélectionné pour une promotion multi-sites");
+        }
+
+        validatePromotionType(req);
+        validateMarketingConditions(req);
+    }
+
+    private void validatePromotionType(CreatePricingPromotionRequest req) {
+        PromotionType type = req.promotionType();
+
+        if (type == PromotionType.PERCENT_DISCOUNT
+                && (req.discountPercent() == null || req.discountPercent().signum() <= 0)) {
+            throw new RuntimeException("Le rabais en pourcentage doit être supérieur à 0");
+        }
+
+        if (type == PromotionType.AMOUNT_DISCOUNT
+                && (req.discountAmount() == null || req.discountAmount().signum() <= 0)) {
+            throw new RuntimeException("Le rabais en dollars doit être supérieur à 0");
+        }
+
+        if (type == PromotionType.FIXED_PRICE
+                && (req.fixedPrice() == null || req.fixedPrice().signum() <= 0)) {
+            throw new RuntimeException("Le prix fixe doit être supérieur à 0");
+        }
+
+        if (type == PromotionType.BUY_X_PAY_Y) {
+            if (req.buyNights() == null || req.payNights() == null) {
+                throw new RuntimeException("Les champs nuits achetées et nuits payées sont obligatoires");
+            }
+
+            if (req.buyNights() <= req.payNights()) {
+                throw new RuntimeException("Le nombre de nuits achetées doit être supérieur au nombre de nuits payées");
+            }
+        }
+
+        if (type == PromotionType.X_NIGHTS_FOR_AMOUNT) {
+            if (req.packageNights() == null || req.packageNights() <= 0) {
+                throw new RuntimeException("Le nombre de nuits du forfait est obligatoire");
+            }
+
+            if (req.packagePrice() == null || req.packagePrice().signum() <= 0) {
+                throw new RuntimeException("Le prix du forfait est obligatoire");
+            }
+        }
+
+        if (type == PromotionType.CONSECUTIVE_WEEKENDS) {
+            if (req.requiredConsecutiveWeekends() == null || req.requiredConsecutiveWeekends() <= 0) {
+                throw new RuntimeException("Le nombre de fins de semaine consécutives est obligatoire");
+            }
+
+            if (req.packagePrice() == null || req.packagePrice().signum() <= 0) {
+                throw new RuntimeException("Le montant total de la promotion est obligatoire");
+            }
+        }
+
+        if (type == PromotionType.PACKAGE
+                && (req.packagePrice() == null || req.packagePrice().signum() <= 0)) {
+            throw new RuntimeException("Le prix du forfait est obligatoire");
+        }
+    }
+
+    private void validateMarketingConditions(CreatePricingPromotionRequest req) {
+        if (req.requiresPromoCode() != null && req.requiresPromoCode()) {
+            if (req.promoCode() == null || req.promoCode().isBlank()) {
+                throw new RuntimeException("Un code promo est obligatoire si la promotion exige un code");
+            }
+        }
+
+        if (req.arrivalWithinDays() != null && req.arrivalWithinDays() < 0) {
+            throw new RuntimeException("Le nombre de jours last minute doit être positif");
+        }
+
+        if (req.promotionType() == PromotionType.CONSECUTIVE_WEEKENDS) {
+            if (req.requiredArrivalDay() != null && req.requiredArrivalDay() != PricingDayOfWeek.FRIDAY) {
+                throw new RuntimeException("Une promotion de fins de semaine consécutives doit commencer un vendredi");
+            }
+        }
+    }
+
+    private String normalizePromoCode(String promoCode) {
+        if (promoCode == null || promoCode.isBlank()) {
             return null;
         }
 
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return promoCode.trim().toUpperCase();
     }
 }

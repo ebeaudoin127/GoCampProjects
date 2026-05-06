@@ -7,8 +7,8 @@
 // Résumé :
 // - Écran admin de gestion des promotions dynamiques
 // - Intègre une aide en 3 niveaux : aide contextuelle, preview et modal détaillée
-// - Charge les sites et regroupements avec plusieurs endpoints possibles
-// - Permet de configurer les promotions sans encore les appliquer au pricing
+// - Gère les promotions marketing simples : code promo, early booking,
+//   last minute et jour d’arrivée obligatoire
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -42,6 +42,11 @@ const emptyForm = {
   priority: 100,
   combinable: false,
   isActive: true,
+  promoCode: "",
+  requiresPromoCode: false,
+  bookingBeforeDate: "",
+  arrivalWithinDays: "",
+  requiredArrivalDay: "",
   daysOfWeek: [],
 };
 
@@ -169,10 +174,18 @@ export default function PricingPromotionsPage() {
   };
 
   const updateField = (name, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        [name]: value,
+      };
+
+      if (name === "promotionType" && value === "CONSECUTIVE_WEEKENDS") {
+        next.requiredArrivalDay = "FRIDAY";
+      }
+
+      return next;
+    });
   };
 
   const resetForm = () => {
@@ -227,6 +240,11 @@ export default function PricingPromotionsPage() {
       priority: promotion.priority ?? 100,
       combinable: !!promotion.combinable,
       isActive: promotion.isActive !== false,
+      promoCode: promotion.promoCode || "",
+      requiresPromoCode: !!promotion.requiresPromoCode,
+      bookingBeforeDate: promotion.bookingBeforeDate || "",
+      arrivalWithinDays: promotion.arrivalWithinDays ?? "",
+      requiredArrivalDay: promotion.requiredArrivalDay || "",
       daysOfWeek: Array.isArray(promotion.days) ? promotion.days : [],
     });
 
@@ -249,6 +267,14 @@ export default function PricingPromotionsPage() {
 
     if (form.targetType === "MULTI_CAMPSITE" && form.campsiteIds.length === 0) {
       return "Sélectionne au moins un site.";
+    }
+
+    if (form.requiresPromoCode && !form.promoCode.trim()) {
+      return "Indique le code promo requis.";
+    }
+
+    if (form.arrivalWithinDays !== "" && Number(form.arrivalWithinDays) < 0) {
+      return "Le nombre de jours last minute doit être positif.";
     }
 
     if (form.promotionType === "PERCENT_DISCOUNT") {
@@ -284,6 +310,10 @@ export default function PricingPromotionsPage() {
     if (form.promotionType === "CONSECUTIVE_WEEKENDS") {
       if (form.requiredConsecutiveWeekends === "" || form.packagePrice === "") {
         return "Indique le nombre de fins de semaine consécutives et le montant.";
+      }
+
+      if (form.requiredArrivalDay && form.requiredArrivalDay !== "FRIDAY") {
+        return "Une promotion de fins de semaine consécutives doit commencer un vendredi.";
       }
     }
 
@@ -332,6 +362,11 @@ export default function PricingPromotionsPage() {
     priority: numberOrNull(form.priority) ?? 100,
     combinable: !!form.combinable,
     isActive: !!form.isActive,
+    promoCode: form.promoCode.trim() || null,
+    requiresPromoCode: !!form.requiresPromoCode,
+    bookingBeforeDate: form.bookingBeforeDate || null,
+    arrivalWithinDays: numberOrNull(form.arrivalWithinDays),
+    requiredArrivalDay: form.requiredArrivalDay || null,
     days: form.daysOfWeek,
   });
 
@@ -766,6 +801,74 @@ export default function PricingPromotionsPage() {
                   />
                 </div>
 
+                <div className="md:col-span-2 rounded-2xl border bg-blue-50 p-4">
+                  <p className="font-semibold text-slate-900 mb-3">
+                    Conditions marketing
+                  </p>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field label="Code promo">
+                      <input
+                        type="text"
+                        value={form.promoCode}
+                        onChange={(event) => updateField("promoCode", event.target.value.toUpperCase())}
+                        className="w-full rounded-xl border px-4 py-3"
+                        placeholder="Ex. ETE2026"
+                      />
+                    </Field>
+
+                    <div className="flex items-end">
+                      <CheckboxField
+                        label="Code promo obligatoire"
+                        checked={form.requiresPromoCode}
+                        onChange={(value) => updateField("requiresPromoCode", value)}
+                      />
+                    </div>
+
+                    <Field label="Réserver avant le">
+                      <input
+                        type="date"
+                        value={form.bookingBeforeDate}
+                        onChange={(event) => updateField("bookingBeforeDate", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                      />
+                    </Field>
+
+                    <Field label="Last minute : arrivée dans X jours">
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.arrivalWithinDays}
+                        onChange={(event) => updateField("arrivalWithinDays", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                        placeholder="Ex. 3"
+                      />
+                    </Field>
+
+                    <Field label="Jour d’arrivée obligatoire" className="md:col-span-2">
+                      <select
+                        value={form.requiredArrivalDay}
+                        onChange={(event) => updateField("requiredArrivalDay", event.target.value)}
+                        className="w-full rounded-xl border px-4 py-3"
+                        disabled={form.promotionType === "CONSECUTIVE_WEEKENDS"}
+                      >
+                        <option value="">Aucun jour obligatoire</option>
+                        {days.map((day) => (
+                          <option key={day.value} value={day.value}>
+                            {day.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      {form.promotionType === "CONSECUTIVE_WEEKENDS" && (
+                        <p className="mt-2 text-sm text-slate-600">
+                          Pour cette promotion, l’arrivée doit toujours être un vendredi et le départ un dimanche.
+                        </p>
+                      )}
+                    </Field>
+                  </div>
+                </div>
+
                 <div className="md:col-span-2 rounded-2xl border bg-slate-50 p-4">
                   <p className="font-medium text-slate-800 mb-3">Jours applicables</p>
                   <div className="grid gap-2 md:grid-cols-4">
@@ -828,6 +931,9 @@ export default function PricingPromotionsPage() {
                             <Badge>{promotion.promotionType}</Badge>
                             <Badge>{promotion.targetType}</Badge>
                             <Badge>{promotion.isActive ? "Active" : "Inactive"}</Badge>
+                            {promotion.requiresPromoCode && (
+                              <Badge>Code : {promotion.promoCode}</Badge>
+                            )}
                           </div>
 
                           {promotion.description && (

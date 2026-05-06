@@ -1,10 +1,11 @@
 // ============================================================
 // Fichier : PricingPromotionResponse.java
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-05
+// Auteur : ChatGPT
 //
 // Résumé :
-// - DTO retourné au frontend pour les promotions dynamiques
-// - Inclut les cibles, types, montants, forfaits, jours et statut
+// - DTO retourné au frontend pour une promotion tarifaire dynamique
+// - Inclut la cible, les montants, les conditions marketing et les jours
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.dto;
@@ -52,6 +53,12 @@ public record PricingPromotionResponse(
         Integer priority,
         Boolean combinable,
         Boolean isActive,
+
+        String promoCode,
+        Boolean requiresPromoCode,
+        LocalDate bookingBeforeDate,
+        Integer arrivalWithinDays,
+        PricingDayOfWeek requiredArrivalDay,
 
         List<PricingDayOfWeek> days
 ) {}

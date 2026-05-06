@@ -1,17 +1,28 @@
 
+
+
+
+
+
 // ============================================================
 // Fichier : frontend/src/pages/admin/PriceCalculatorPage.jsx
 // Dernière modification : 2026-05-05
+// Auteur : ChatGPT
 //
 // Résumé :
 // - Calculateur de prix admin
-// - Sélection du site via liste déroulante
-// - Charge les sites avec plusieurs endpoints possibles
-// - Envoie une demande de calcul au backend
+// - Permet de tester un séjour sans créer de réservation
+// - Ajout du champ code promo
+// - Affiche indisponibilité, prix de base, rabais et total final
 // ============================================================
 
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, Calculator } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BadgePercent,
+  Calculator,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import api from "../../services/api";
 
@@ -22,6 +33,7 @@ export default function PriceCalculatorPage() {
   const [campsiteId, setCampsiteId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [promoCode, setPromoCode] = useState("");
 
   const [result, setResult] = useState(null);
   const [loadingSites, setLoadingSites] = useState(true);
@@ -91,6 +103,7 @@ export default function PriceCalculatorPage() {
         campsiteId: Number(campsiteId),
         startDate,
         endDate,
+        promoCode: promoCode.trim() || null,
       });
 
       setResult(response);
@@ -101,6 +114,23 @@ export default function PriceCalculatorPage() {
       setCalculating(false);
     }
   };
+
+  const formatMoney = (value) => {
+    return `${Number(value || 0).toFixed(2)} $`;
+  };
+
+  const unavailabilities = Array.isArray(result?.unavailabilities)
+    ? result.unavailabilities
+    : [];
+
+  const appliedPromotions = Array.isArray(result?.appliedPromotions)
+    ? result.appliedPromotions
+    : [];
+
+  const hasOldShape = result && result.basePrice !== undefined;
+  const baseTotal = result?.baseTotal ?? result?.basePrice ?? 0;
+  const discountTotal = result?.promotionDiscountTotal ?? result?.discount ?? 0;
+  const finalTotal = result?.total ?? result?.finalPrice ?? 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -144,7 +174,7 @@ export default function PriceCalculatorPage() {
 
                 <select
                   value={campsiteId}
-                  onChange={(e) => setCampsiteId(e.target.value)}
+                  onChange={(event) => setCampsiteId(event.target.value)}
                   className="w-full rounded-xl border px-4 py-3"
                   disabled={loadingSites}
                 >
@@ -173,7 +203,7 @@ export default function PriceCalculatorPage() {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(event) => setStartDate(event.target.value)}
                   className="w-full rounded-xl border px-4 py-3"
                 />
               </div>
@@ -185,9 +215,25 @@ export default function PriceCalculatorPage() {
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(event) => setEndDate(event.target.value)}
                   className="w-full rounded-xl border px-4 py-3"
                 />
+              </div>
+
+              <div className="rounded-2xl border bg-slate-50 p-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Code promo
+                </label>
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(event) => setPromoCode(event.target.value.toUpperCase())}
+                  className="w-full rounded-xl border px-4 py-3 bg-white"
+                  placeholder="Ex. ETE2026"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  Optionnel. Sert à tester les promotions qui exigent un code.
+                </p>
               </div>
 
               <button
@@ -218,69 +264,192 @@ export default function PriceCalculatorPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-sm text-slate-500">Nombre de nuits</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                      {result.nights}
-                    </p>
+                {!result.available && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 text-red-700" />
+                      <div>
+                        <h3 className="font-semibold text-red-900">
+                          Calcul impossible
+                        </h3>
+                        <p className="mt-1 text-sm text-red-800">
+                          {result.message ||
+                            result.explanation ||
+                            "Le séjour ne peut pas être calculé pour la période sélectionnée."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {unavailabilities.length > 0 && (
+                      <div className="mt-4 space-y-3">
+                        <h4 className="text-sm font-semibold text-red-900">
+                          Périodes d’indisponibilité détectées
+                        </h4>
+
+                        {unavailabilities.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-xl border border-red-200 bg-white p-4 text-sm"
+                          >
+                            <p className="font-medium text-slate-900">
+                              Du {item.startDate} au {item.endDate}
+                            </p>
+
+                            {item.reason && (
+                              <p className="mt-1 text-slate-700">
+                                <strong>Raison :</strong> {item.reason}
+                              </p>
+                            )}
+
+                            {item.notes && (
+                              <p className="mt-1 text-slate-700">
+                                <strong>Notes :</strong> {item.notes}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                )}
 
-                  <div className="rounded-2xl bg-emerald-50 p-4">
-                    <p className="text-sm text-emerald-700">Total</p>
-                    <p className="text-2xl font-bold text-emerald-800">
-                      {Number(result.total || 0).toFixed(2)} $
-                    </p>
-                  </div>
-                </div>
+                {result.available && (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl bg-slate-50 p-4">
+                        <p className="text-sm text-slate-500">Prix de base</p>
+                        <p className="text-2xl font-bold text-slate-900">
+                          {formatMoney(baseTotal)}
+                        </p>
+                      </div>
 
-                <div>
-                  <h3 className="font-semibold text-slate-900 mb-3">
-                    Détail par nuit
-                  </h3>
+                      <div className="rounded-2xl bg-emerald-50 p-4">
+                        <p className="text-sm text-emerald-700">
+                          Rabais promotions
+                        </p>
+                        <p className="text-2xl font-bold text-emerald-800">
+                          -{formatMoney(discountTotal)}
+                        </p>
+                      </div>
 
-                  {Array.isArray(result.lines) && result.lines.length > 0 ? (
-                    <div className="overflow-x-auto rounded-2xl border">
-                      <table className="min-w-full text-sm">
-                        <thead className="bg-slate-100 text-slate-700">
-                          <tr>
-                            <th className="text-left px-4 py-3 font-semibold">
-                              Date
-                            </th>
-                            <th className="text-left px-4 py-3 font-semibold">
-                              Règle
-                            </th>
-                            <th className="text-right px-4 py-3 font-semibold">
-                              Montant
-                            </th>
-                          </tr>
-                        </thead>
+                      <div className="rounded-2xl bg-purple-50 p-4">
+                        <p className="text-sm text-purple-700">Total final</p>
+                        <p className="text-2xl font-bold text-purple-800">
+                          {formatMoney(finalTotal)}
+                        </p>
+                      </div>
+                    </div>
 
-                        <tbody>
-                          {result.lines.map((line, index) => (
-                            <tr key={`${line.date}-${index}`} className="border-t">
-                              <td className="px-4 py-3">{line.date}</td>
-                              <td className="px-4 py-3">
-                                {line.label || "Prix journalier"}
-                              </td>
-                              <td className="px-4 py-3 text-right font-medium">
-                                {Number(line.amount || 0).toFixed(2)} $
-                              </td>
-                            </tr>
+                    {result.message && (
+                      <div className="rounded-2xl border bg-slate-50 p-4 text-sm text-slate-700">
+                        {result.message}
+                      </div>
+                    )}
+
+                    {hasOldShape && result.appliedPromotionName && (
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BadgePercent className="h-5 w-5 text-emerald-700" />
+                          <h3 className="font-semibold text-emerald-900">
+                            Promotion appliquée
+                          </h3>
+                        </div>
+
+                        <p className="font-semibold text-slate-900">
+                          {result.appliedPromotionName}
+                        </p>
+
+                        {result.explanation && (
+                          <p className="text-sm text-slate-700 mt-1">
+                            {result.explanation}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {appliedPromotions.length > 0 && (
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <BadgePercent className="h-5 w-5 text-emerald-700" />
+                          <h3 className="font-semibold text-emerald-900">
+                            Promotions appliquées
+                          </h3>
+                        </div>
+
+                        <div className="space-y-3">
+                          {appliedPromotions.map((promo) => (
+                            <div
+                              key={promo.id}
+                              className="rounded-xl bg-white border p-4 text-sm"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="font-semibold text-slate-900">
+                                    {promo.name}
+                                  </p>
+                                  <p className="text-slate-500">
+                                    {promo.promotionType}
+                                    {promo.description ? ` · ${promo.description}` : ""}
+                                  </p>
+                                </div>
+
+                                <p className="font-bold text-emerald-700">
+                                  -{formatMoney(promo.discountAmount)}
+                                </p>
+                              </div>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed bg-slate-50 px-4 py-6 text-sm text-slate-600">
-                      Aucun détail retourné par le backend.
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      </div>
+                    )}
 
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  V1 du calculateur : le calcul utilise les règles tarifaires de base. Les promotions dynamiques seront branchées ensuite.
-                </div>
+                    {Array.isArray(result.lines) && result.lines.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-slate-900 mb-3">
+                          Détail par nuit
+                        </h3>
+
+                        <div className="overflow-x-auto rounded-2xl border">
+                          <table className="min-w-full text-sm">
+                            <thead className="bg-slate-100 text-slate-700">
+                              <tr>
+                                <th className="text-left px-4 py-3 font-semibold">
+                                  Date
+                                </th>
+                                <th className="text-left px-4 py-3 font-semibold">
+                                  Règle
+                                </th>
+                                <th className="text-right px-4 py-3 font-semibold">
+                                  Montant
+                                </th>
+                              </tr>
+                            </thead>
+
+                            <tbody>
+                              {result.lines.map((line, index) => (
+                                <tr key={`${line.date}-${index}`} className="border-t">
+                                  <td className="px-4 py-3">{line.date}</td>
+                                  <td className="px-4 py-3">
+                                    {line.label || "Prix journalier"}
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-medium">
+                                    {formatMoney(line.amount)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {!Array.isArray(result.lines) && (
+                      <div className="rounded-2xl border border-dashed bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                        Ce calcul utilise l’ancien format de réponse du backend. Les détails par nuit seront disponibles avec la version détaillée du service.
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>

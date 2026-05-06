@@ -1,10 +1,11 @@
 // ============================================================
-// Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/repository/CampsiteUnavailabilityRepository.java
-// Dernière modification : 2026-04-20
+// Fichier : CampsiteUnavailabilityRepository.java
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - Repository des indisponibilités temporaires des sites
-// - Inclut une méthode utile pour la future logique de réservation
+// - Permet de lister les indisponibilités d’un site
+// - Permet de trouver les indisponibilités bloquantes qui chevauchent une période
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.repository;
@@ -20,6 +21,12 @@ public interface CampsiteUnavailabilityRepository extends JpaRepository<Campsite
     List<CampsiteUnavailability> findByCampsiteIdOrderByStartDateAscEndDateAsc(Long campsiteId);
 
     boolean existsByCampsiteIdAndIsBlockingTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Long campsiteId,
+            LocalDate requestedEndDate,
+            LocalDate requestedStartDate
+    );
+
+    List<CampsiteUnavailability> findByCampsiteIdAndIsBlockingTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAscEndDateAsc(
             Long campsiteId,
             LocalDate requestedEndDate,
             LocalDate requestedStartDate

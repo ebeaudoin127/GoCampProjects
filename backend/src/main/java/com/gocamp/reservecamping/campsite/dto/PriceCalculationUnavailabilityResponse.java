@@ -1,22 +1,21 @@
 // ============================================================
-// Fichier : PriceCalculationRequest.java
+// Fichier : PriceCalculationUnavailabilityResponse.java
 // Dernière modification : 2026-05-05
-// Auteur : ChatGPT
 //
 // Résumé :
-// - Requête pour calculer un prix de séjour
-// - Supporte le calcul nuit par nuit
-// - Inclut un code promo optionnel
+// - DTO représentant une indisponibilité détectée par le calculateur
+// - Retourne la période, la raison et les notes
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.dto;
 
 import java.time.LocalDate;
 
-public record PriceCalculationRequest(
-        Long campgroundId,
-        Long campsiteId,
+public record PriceCalculationUnavailabilityResponse(
+        Long id,
         LocalDate startDate,
         LocalDate endDate,
-        String promoCode
+        String reason,
+        String notes,
+        boolean blocking
 ) {}

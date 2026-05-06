@@ -1,13 +1,11 @@
-
 // ============================================================
 // Fichier : CreatePricingPromotionRequest.java
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-05
+// Auteur : ChatGPT
 //
 // Résumé :
-// - DTO pour créer une promotion dynamique
-// - Supporte les promotions par camping, regroupement, site unique ou multi-sites
-// - Supporte %, montant fixe, prix fixe, nuits achetées/payées,
-//   forfait X nuits pour X montant et fins de semaine consécutives
+// - DTO pour créer une promotion tarifaire dynamique
+// - Supporte les promotions simples, forfaitaires et marketing
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.dto;
@@ -55,6 +53,12 @@ public record CreatePricingPromotionRequest(
         Integer priority,
         Boolean combinable,
         Boolean isActive,
+
+        String promoCode,
+        Boolean requiresPromoCode,
+        LocalDate bookingBeforeDate,
+        Integer arrivalWithinDays,
+        PricingDayOfWeek requiredArrivalDay,
 
         List<PricingDayOfWeek> days
 ) {}

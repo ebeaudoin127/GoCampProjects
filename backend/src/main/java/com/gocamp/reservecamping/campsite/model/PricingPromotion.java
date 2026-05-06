@@ -1,12 +1,12 @@
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/model/PricingPromotion.java
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-05
 //
 // Résumé :
-// - Promotion tarifaire dynamique
-// - Supporte SITE, GROUP, ALL_CAMPGROUND et MULTI_CAMPSITE
-// - Supporte période, priorité, cumul, prix fixe, rabais %, rabais $,
-//   X nuits pour Y, X nuits pour X montant et fins de semaine consécutives
+// - Promotion ponctuelle pouvant bypasser ou ajuster
+//   la tarification normale
+// - Supporte SITE, GROUP, MULTI_CAMPSITE et ALL_CAMPGROUND
+// - Supporte promotions marketing avancées simples
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.model;
@@ -101,6 +101,22 @@ public class PricingPromotion {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Column(name = "promo_code", length = 100)
+    private String promoCode;
+
+    @Column(name = "requires_promo_code", nullable = false)
+    private boolean requiresPromoCode = false;
+
+    @Column(name = "booking_before_date")
+    private LocalDate bookingBeforeDate;
+
+    @Column(name = "arrival_within_days")
+    private Integer arrivalWithinDays;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "required_arrival_day", length = 20)
+    private PricingDayOfWeek requiredArrivalDay;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -112,18 +128,11 @@ public class PricingPromotion {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
-        normalizeDefaults();
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
-        normalizeDefaults();
-    }
-
-    private void normalizeDefaults() {
-        if (this.priority == null) this.priority = 100;
-        if (this.applicationMode == null) this.applicationMode = PromotionApplicationMode.ADJUSTMENT;
     }
 
     public Long getId() {
@@ -206,12 +215,12 @@ public class PricingPromotion {
         return description;
     }
 
-    public BigDecimal getFixedPrice() {
-        return fixedPrice;
-    }
-
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public BigDecimal getFixedPrice() {
+        return fixedPrice;
     }
 
     public void setFixedPrice(BigDecimal fixedPrice) {
@@ -312,6 +321,46 @@ public class PricingPromotion {
 
     public void setActive(boolean active) {
         isActive = active;
+    }
+
+    public String getPromoCode() {
+        return promoCode;
+    }
+
+    public void setPromoCode(String promoCode) {
+        this.promoCode = promoCode;
+    }
+
+    public boolean isRequiresPromoCode() {
+        return requiresPromoCode;
+    }
+
+    public void setRequiresPromoCode(boolean requiresPromoCode) {
+        this.requiresPromoCode = requiresPromoCode;
+    }
+
+    public LocalDate getBookingBeforeDate() {
+        return bookingBeforeDate;
+    }
+
+    public void setBookingBeforeDate(LocalDate bookingBeforeDate) {
+        this.bookingBeforeDate = bookingBeforeDate;
+    }
+
+    public Integer getArrivalWithinDays() {
+        return arrivalWithinDays;
+    }
+
+    public void setArrivalWithinDays(Integer arrivalWithinDays) {
+        this.arrivalWithinDays = arrivalWithinDays;
+    }
+
+    public PricingDayOfWeek getRequiredArrivalDay() {
+        return requiredArrivalDay;
+    }
+
+    public void setRequiredArrivalDay(PricingDayOfWeek requiredArrivalDay) {
+        this.requiredArrivalDay = requiredArrivalDay;
     }
 
     public LocalDateTime getCreatedAt() {
