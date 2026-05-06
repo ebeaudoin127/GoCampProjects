@@ -1,12 +1,14 @@
 // ============================================================
 // Fichier : frontend/src/components/pricing/PromotionHelpModal.jsx
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-06
 // Auteur : ChatGPT
 //
 // Résumé :
 // - Modal d’aide détaillée pour la création de promotions dynamiques
 // - Explique tous les types de promotions disponibles
 // - Donne les champs requis, exemples et bonnes pratiques
+// - Ajout de la cible terrains disponibles / non réservés
+// - Ajout des explications sur les codes promo
 // ============================================================
 
 import React from "react";
@@ -156,6 +158,45 @@ export default function PromotionHelpModal({ open, onClose }) {
             ))}
           </div>
 
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+            <h3 className="text-lg font-semibold text-emerald-950">
+              Cible terrains disponibles / non réservés
+            </h3>
+
+            <div className="mt-3 space-y-2 text-sm text-emerald-900">
+              <p>
+                Cette cible sert aux promotions de remplissage. Elle vise les terrains encore libres pour une période donnée.
+              </p>
+              <p>
+                Exemple : jeudi midi, seulement 40% des sites sont loués pour vendredi et samedi.
+                Le gestionnaire peut créer une promotion de 25% sur les terrains disponibles pour vendredi soir et samedi soir.
+              </p>
+              <p>
+                Cette cible deviendra pleinement intelligente lorsque le moteur de réservation pourra vérifier précisément quels terrains sont déjà réservés.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+            <h3 className="text-lg font-semibold text-blue-950">
+              Codes promo
+            </h3>
+
+            <div className="mt-3 space-y-2 text-sm text-blue-900">
+              <p>
+                Le code promo permet de contrôler ou d’identifier une campagne.
+              </p>
+              <p>
+                <strong>Code promo obligatoire :</strong> le client doit entrer le code exact pour obtenir le rabais.
+                Exemple : ETE2026.
+              </p>
+              <p>
+                <strong>Code promo non obligatoire :</strong> le code peut servir de référence marketing ou administrative,
+                mais la promotion peut quand même s’appliquer automatiquement.
+              </p>
+            </div>
+          </div>
+
           <div className="mt-6 rounded-2xl border bg-slate-50 p-5">
             <h3 className="text-lg font-semibold text-slate-900">
               Recommandations générales
@@ -173,6 +214,9 @@ export default function PromotionHelpModal({ open, onClose }) {
               </p>
               <p>
                 <strong>Cible multi-sites :</strong> pratique pour sélectionner plusieurs sites sans créer un regroupement tarifaire.
+              </p>
+              <p>
+                <strong>Cible terrains disponibles :</strong> pratique pour remplir les sites libres à court terme.
               </p>
               <p>
                 <strong>Priorité :</strong> utilise 10, 20, 30 plutôt que 1, 2, 3 pour garder de l’espace entre les règles.

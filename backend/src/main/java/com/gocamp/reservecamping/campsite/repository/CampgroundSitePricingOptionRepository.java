@@ -1,9 +1,11 @@
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/repository/CampgroundSitePricingOptionRepository.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - Repository des valeurs de tarification par camping
+// - Recherche par camping
+// - Recherche par id/camping
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.repository;

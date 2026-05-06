@@ -1,9 +1,10 @@
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/repository/CampsitePricingAssignmentRepository.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - Repository de l’affectation d’une valeur de tarification à un site
+// - Permet de vérifier si une valeur est utilisée avant suppression
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.repository;
@@ -18,4 +19,6 @@ public interface CampsitePricingAssignmentRepository extends JpaRepository<Camps
     Optional<CampsitePricingAssignment> findByCampsiteId(Long campsiteId);
 
     void deleteByCampsiteId(Long campsiteId);
+
+    boolean existsByPricingOptionId(Long pricingOptionId);
 }

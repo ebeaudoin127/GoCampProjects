@@ -1,6 +1,6 @@
 // ============================================================
 // Fichier : frontend/src/components/pricing/PromotionHelpPanel.jsx
-// Dernière modification : 2026-05-04
+// Dernière modification : 2026-05-06
 // Auteur : ChatGPT
 //
 // Résumé :
@@ -8,6 +8,8 @@
 // - Affiche une explication courte selon le type sélectionné
 // - Affiche une prévisualisation lisible de la promotion
 // - Permet d’ouvrir une aide détaillée en modal
+// - Ajout de la cible terrains disponibles / non réservés
+// - Ajout d’explications sur les codes promo
 // ============================================================
 
 import React from "react";
@@ -69,6 +71,7 @@ function getTargetLabel(targetType) {
   if (targetType === "GROUP") return "un regroupement tarifaire";
   if (targetType === "SITE") return "un site précis";
   if (targetType === "MULTI_CAMPSITE") return "plusieurs sites précis";
+  if (targetType === "AVAILABLE_CAMPSITES") return "les terrains disponibles / non réservés";
   return "une cible non définie";
 }
 
@@ -123,7 +126,16 @@ function buildPreview(form) {
       ? ` Jours ciblés : ${form.daysOfWeek.join(", ")}.`
       : " Tous les jours sont admissibles.";
 
-  return `${name} : ${value}, applicable à ${target}, du ${start} au ${end}.${minNights}${maxNights}${days}`;
+  const promoCode =
+    form.requiresPromoCode && form.promoCode
+      ? ` Code promo requis : ${form.promoCode}.`
+      : form.requiresPromoCode
+      ? " Code promo requis, mais aucun code n’est encore défini."
+      : form.promoCode
+      ? ` Code promo configuré : ${form.promoCode}.`
+      : "";
+
+  return `${name} : ${value}, applicable à ${target}, du ${start} au ${end}.${minNights}${maxNights}${days}${promoCode}`;
 }
 
 export default function PromotionHelpPanel({ form, onOpenHelp }) {
@@ -154,6 +166,32 @@ export default function PromotionHelpPanel({ form, onOpenHelp }) {
           <p className="mt-3 text-sm text-slate-700">{help.example}</p>
           <p className="mt-3 text-xs font-medium text-slate-500">{help.required}</p>
         </div>
+
+        {form.targetType === "AVAILABLE_CAMPSITES" && (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <p className="font-semibold text-emerald-900">
+              Cible terrains disponibles / non réservés
+            </p>
+            <p className="mt-1">
+              Cette cible sert aux promotions de remplissage. Exemple : jeudi midi,
+              seulement 40% des sites sont loués pour le week-end; tu peux offrir
+              25% sur les terrains encore libres vendredi soir et samedi soir.
+            </p>
+          </div>
+        )}
+
+        {(form.promoCode || form.requiresPromoCode) && (
+          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+            <p className="font-semibold text-blue-900">
+              Code promo
+            </p>
+            <p className="mt-1">
+              Si “Code promo obligatoire” est coché, le client devra entrer le code
+              exact pour obtenir le rabais. Si un code est inscrit sans être obligatoire,
+              il peut servir de repère marketing ou administratif.
+            </p>
+          </div>
+        )}
 
         <button
           type="button"

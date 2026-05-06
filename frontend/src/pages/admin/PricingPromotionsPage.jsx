@@ -1,7 +1,12 @@
 
+
+
+
+
+
 // ============================================================
 // Fichier : src/pages/admin/PricingPromotionsPage.jsx
-// Dernière modification : 2026-05-05
+// Dernière modification : 2026-05-06
 // Auteur : ChatGPT
 //
 // Résumé :
@@ -9,6 +14,7 @@
 // - Intègre une aide en 3 niveaux : aide contextuelle, preview et modal détaillée
 // - Gère les promotions marketing simples : code promo, early booking,
 //   last minute et jour d’arrivée obligatoire
+// - Ajout de la cible terrains disponibles / non réservés
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -66,6 +72,7 @@ const targetTypes = [
   { value: "GROUP", label: "Regroupement tarifaire" },
   { value: "SITE", label: "Un site précis" },
   { value: "MULTI_CAMPSITE", label: "Plusieurs sites précis" },
+  { value: "AVAILABLE_CAMPSITES", label: "Terrains disponibles / non réservés" },
 ];
 
 const days = [
@@ -182,6 +189,20 @@ export default function PricingPromotionsPage() {
 
       if (name === "promotionType" && value === "CONSECUTIVE_WEEKENDS") {
         next.requiredArrivalDay = "FRIDAY";
+      }
+
+      if (name === "targetType") {
+        if (value !== "SITE") {
+          next.campsiteId = "";
+        }
+
+        if (value !== "GROUP") {
+          next.pricingOptionId = "";
+        }
+
+        if (value !== "MULTI_CAMPSITE") {
+          next.campsiteIds = [];
+        }
       }
 
       return next;
@@ -542,6 +563,19 @@ export default function PricingPromotionsPage() {
                     ))}
                   </select>
                 </Field>
+
+{/*                 {form.targetType === "AVAILABLE_CAMPSITES" && (
+                  <div className="md:col-span-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                    <p className="font-semibold text-emerald-900">
+                      Promotion de remplissage
+                    </p>
+                    <p className="mt-1">
+                      Cette cible vise les terrains disponibles / non réservés pendant la période choisie.
+                      Exemple : jeudi midi, seulement 40% des sites sont loués pour le week-end;
+                      tu peux offrir 25% sur les terrains encore libres vendredi soir et samedi soir.
+                    </p>
+                  </div>
+                )} */}
 
                 {form.targetType === "GROUP" && (
                   <Field label="Regroupement tarifaire" className="md:col-span-2">

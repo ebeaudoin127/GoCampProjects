@@ -6,6 +6,7 @@
 // - Repository des promotions tarifaires dynamiques
 // - Permet de lister les promotions par camping
 // - Permet de trouver les promotions actives qui chevauchent une période
+// - Permet de vérifier si une valeur tarifaire est utilisée par une promotion
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.repository;
@@ -25,4 +26,6 @@ public interface PricingPromotionRepository extends JpaRepository<PricingPromoti
             LocalDate requestedEndDate,
             LocalDate requestedStartDate
     );
+
+    boolean existsByPricingOptionId(Long pricingOptionId);
 }

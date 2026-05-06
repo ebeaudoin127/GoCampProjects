@@ -1,12 +1,12 @@
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/repository/CampsitePricingRuleRepository.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - Repository des règles tarifaires
-// - Ajout des méthodes de recherche détaillée des chevauchements
-// - Conserve la logique existante
-// - Ajout d’une méthode utilitaire pour le moteur de prix
+// - Recherche par site ou regroupement
+// - Méthodes de chevauchement pour le calculateur
+// - Vérification d’utilisation d’une valeur tarifaire avant suppression
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.repository;
@@ -25,6 +25,8 @@ public interface CampsitePricingRuleRepository extends JpaRepository<CampsitePri
     List<CampsitePricingRule> findByCampsiteIdOrderByStartDateAscEndDateAsc(Long campsiteId);
 
     List<CampsitePricingRule> findByPricingOptionIdOrderByStartDateAscEndDateAsc(Long pricingOptionId);
+
+    boolean existsByPricingOptionId(Long pricingOptionId);
 
     boolean existsByCampgroundIdAndTargetTypeAndCampsiteIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long campgroundId,

@@ -1,9 +1,10 @@
 // ============================================================
 // Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/controller/CampgroundSitePricingOptionController.java
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-05
 //
 // Résumé :
 // - API REST des valeurs de tarification par camping
+// - Création, lecture et suppression sécurisée
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.controller;
@@ -31,5 +32,10 @@ public class CampgroundSitePricingOptionController {
     @PostMapping
     public Object create(@RequestBody CreateCampgroundSitePricingOptionRequest req) {
         return service.create(req);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

@@ -3,8 +3,17 @@
 > vite
 
 
-  VITE v5.4.21  ready in 1095 ms
+  VITE v5.4.21  ready in 717 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
+00 h 45 min 29 s [vite] page reload src/components/pricing/PromotionHelpModal.jsx
+00 h 45 min 39 s [vite] page reload src/components/pricing/PromotionHelpPanel.jsx
+00 h 45 min 39 s [vite] page reload src/components/pricing/PromotionHelpPanel.jsx
+00 h 45 min 45 s [vite] page reload src/pages/admin/PricingPromotionsPage.jsx
+00 h 45 min 45 s [vite] page reload src/pages/admin/PricingPromotionsPage.jsx
+00 h 53 min 54 s [vite] page reload src/components/pricing/PromotionHelpPanel.jsx
+00 h 54 min 14 s [vite] page reload src/components/pricing/PromotionHelpModal.jsx
+00 h 58 min 38 s [vite] page reload src/pages/admin/PricingPromotionsPage.jsx
+01 h 03 min 26 s [vite] page reload src/pages/admin/PricingPromotionsPage.jsx
