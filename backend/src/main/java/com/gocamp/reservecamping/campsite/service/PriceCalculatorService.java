@@ -1,3 +1,4 @@
+
 // ============================================================
 // Fichier : PriceCalculatorService.java
 // Dernière modification : 2026-05-05
@@ -9,13 +10,14 @@
 // - Cherche les règles SITE puis GROUP pour chaque nuit
 // - Respecte dates, minimum de nuits et jours applicables
 // - Applique les promotions dynamiques compatibles
-// - Supporte code promo, early booking, last minute,
-//   jour d’arrivée obligatoire, priorité et cumul
+// - Retourne un détail complet par nuit : prix base, rabais,
+//   prix final et promotion appliquée
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.service;
 
 import com.gocamp.reservecamping.campsite.dto.AppliedPromotionResponse;
+import com.gocamp.reservecamping.campsite.dto.NightPriceBreakdownResponse;
 import com.gocamp.reservecamping.campsite.dto.PriceCalculationLineResponse;
 import com.gocamp.reservecamping.campsite.dto.PriceCalculationRequest;
 import com.gocamp.reservecamping.campsite.dto.PriceCalculationResponse;
@@ -101,6 +103,7 @@ public class PriceCalculatorService {
                     money(BigDecimal.ZERO),
                     List.of(),
                     List.of(),
+                    List.of(),
                     blockingUnavailabilities.stream().map(this::mapUnavailability).toList()
             );
         }
@@ -130,6 +133,8 @@ public class PriceCalculatorService {
         );
 
         List<PriceCalculationLineResponse> lines = new ArrayList<>();
+        List<NightCalculationLine> workingLines = new ArrayList<>();
+
         BigDecimal baseTotal = BigDecimal.ZERO;
 
         for (int i = 0; i < nights; i++) {
@@ -146,6 +151,7 @@ public class PriceCalculatorService {
                         money(BigDecimal.ZERO),
                         money(baseTotal),
                         lines,
+                        buildNightBreakdown(workingLines),
                         List.of(),
                         List.of()
                 );
@@ -162,17 +168,28 @@ public class PriceCalculatorService {
                         money(BigDecimal.ZERO),
                         money(baseTotal),
                         lines,
+                        buildNightBreakdown(workingLines),
                         List.of(),
                         List.of()
                 );
             }
 
             BigDecimal amountMoney = money(amount);
+            String label = buildLineLabel(rule);
 
             lines.add(new PriceCalculationLineResponse(
                     nightDate,
-                    buildLineLabel(rule),
+                    label,
                     amountMoney
+            ));
+
+            workingLines.add(new NightCalculationLine(
+                    nightDate,
+                    label,
+                    amountMoney,
+                    BigDecimal.ZERO,
+                    amountMoney,
+                    null
             ));
 
             baseTotal = baseTotal.add(amountMoney);
@@ -184,7 +201,7 @@ public class PriceCalculatorService {
                 req,
                 nights,
                 pricingOptionId,
-                lines,
+                workingLines,
                 baseTotal,
                 lastNightDate
         );
@@ -195,6 +212,14 @@ public class PriceCalculatorService {
             finalTotal = BigDecimal.ZERO;
         }
 
+        List<PriceCalculationLineResponse> finalLines = workingLines.stream()
+                .map(line -> new PriceCalculationLineResponse(
+                        line.date,
+                        line.pricingRuleName,
+                        money(line.finalPrice)
+                ))
+                .toList();
+
         return new PriceCalculationResponse(
                 true,
                 promotionResult.appliedPromotions.isEmpty()
@@ -204,7 +229,8 @@ public class PriceCalculatorService {
                 money(baseTotal),
                 money(promotionResult.totalDiscount),
                 money(finalTotal),
-                lines,
+                finalLines,
+                buildNightBreakdown(workingLines),
                 promotionResult.appliedPromotions,
                 List.of()
         );
@@ -214,7 +240,7 @@ public class PriceCalculatorService {
             PriceCalculationRequest req,
             int nights,
             Long pricingOptionId,
-            List<PriceCalculationLineResponse> lines,
+            List<NightCalculationLine> workingLines,
             BigDecimal baseTotal,
             LocalDate lastNightDate
     ) {
@@ -241,8 +267,8 @@ public class PriceCalculatorService {
                 continue;
             }
 
-            List<PriceCalculationLineResponse> eligibleLines =
-                    findEligibleLinesForPromotion(promotion, lines);
+            List<NightCalculationLine> eligibleLines =
+                    findEligibleLinesForPromotion(promotion, workingLines);
 
             if (eligibleLines.isEmpty()) {
                 continue;
@@ -268,6 +294,8 @@ public class PriceCalculatorService {
             discount = money(discount.min(currentRemaining));
             totalDiscount = money(totalDiscount.add(discount));
 
+            distributePromotionDiscount(promotion, eligibleLines, discount);
+
             applied.add(new AppliedPromotionResponse(
                     promotion.getId(),
                     promotion.getName(),
@@ -286,14 +314,14 @@ public class PriceCalculatorService {
 
     private BigDecimal calculatePromotionDiscount(
             PricingPromotion promotion,
-            List<PriceCalculationLineResponse> eligibleLines,
+            List<NightCalculationLine> eligibleLines,
             BigDecimal currentRemaining,
             PriceCalculationRequest req
     ) {
         PromotionType type = promotion.getPromotionType();
 
         if (type == PromotionType.PERCENT_DISCOUNT && promotion.getDiscountPercent() != null) {
-            BigDecimal eligibleSubtotal = subtotal(eligibleLines);
+            BigDecimal eligibleSubtotal = subtotalWorking(eligibleLines);
 
             return eligibleSubtotal
                     .multiply(promotion.getDiscountPercent())
@@ -307,8 +335,8 @@ public class PriceCalculatorService {
         if (type == PromotionType.FIXED_PRICE && promotion.getFixedPrice() != null) {
             BigDecimal discount = BigDecimal.ZERO;
 
-            for (PriceCalculationLineResponse line : eligibleLines) {
-                BigDecimal nightlyDiscount = line.amount().subtract(promotion.getFixedPrice());
+            for (NightCalculationLine line : eligibleLines) {
+                BigDecimal nightlyDiscount = line.finalPrice.subtract(promotion.getFixedPrice());
 
                 if (nightlyDiscount.compareTo(BigDecimal.ZERO) > 0) {
                     discount = discount.add(nightlyDiscount);
@@ -330,9 +358,9 @@ public class PriceCalculatorService {
             }
 
             return eligibleLines.stream()
-                    .sorted(Comparator.comparing(PriceCalculationLineResponse::amount))
+                    .sorted(Comparator.comparing(line -> line.finalPrice))
                     .limit(freeNights)
-                    .map(PriceCalculationLineResponse::amount)
+                    .map(line -> line.finalPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
@@ -349,9 +377,9 @@ public class PriceCalculatorService {
             int coveredNights = packages * promotion.getPackageNights();
 
             BigDecimal baseCovered = eligibleLines.stream()
-                    .sorted(Comparator.comparing(PriceCalculationLineResponse::amount).reversed())
+                    .sorted(Comparator.comparing((NightCalculationLine line) -> line.finalPrice).reversed())
                     .limit(coveredNights)
-                    .map(PriceCalculationLineResponse::amount)
+                    .map(line -> line.finalPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal packageTotal = promotion.getPackagePrice().multiply(BigDecimal.valueOf(packages));
@@ -367,7 +395,7 @@ public class PriceCalculatorService {
         }
 
         if (type == PromotionType.PACKAGE && promotion.getPackagePrice() != null) {
-            BigDecimal eligibleSubtotal = subtotal(eligibleLines);
+            BigDecimal eligibleSubtotal = subtotalWorking(eligibleLines);
             BigDecimal discount = eligibleSubtotal.subtract(promotion.getPackagePrice());
 
             return discount.compareTo(BigDecimal.ZERO) > 0 ? discount : BigDecimal.ZERO;
@@ -376,9 +404,58 @@ public class PriceCalculatorService {
         return BigDecimal.ZERO;
     }
 
+    private void distributePromotionDiscount(
+            PricingPromotion promotion,
+            List<NightCalculationLine> eligibleLines,
+            BigDecimal discount
+    ) {
+        if (eligibleLines == null || eligibleLines.isEmpty()) {
+            return;
+        }
+
+        BigDecimal eligibleSubtotal = subtotalWorking(eligibleLines);
+
+        if (eligibleSubtotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal distributed = BigDecimal.ZERO;
+
+        for (int i = 0; i < eligibleLines.size(); i++) {
+            NightCalculationLine line = eligibleLines.get(i);
+
+            BigDecimal lineDiscount;
+
+            if (i == eligibleLines.size() - 1) {
+                lineDiscount = discount.subtract(distributed);
+            } else {
+                lineDiscount = discount
+                        .multiply(line.finalPrice)
+                        .divide(eligibleSubtotal, 2, RoundingMode.HALF_UP);
+            }
+
+            lineDiscount = money(lineDiscount);
+
+            if (lineDiscount.compareTo(line.finalPrice) > 0) {
+                lineDiscount = line.finalPrice;
+            }
+
+            line.discountAmount = money(line.discountAmount.add(lineDiscount));
+            line.finalPrice = money(line.finalPrice.subtract(lineDiscount));
+
+            if (line.appliedPromotion == null || line.appliedPromotion.isBlank()) {
+                line.appliedPromotion = promotion.getName();
+            } else {
+                line.appliedPromotion = line.appliedPromotion + ", " + promotion.getName();
+            }
+
+            distributed = distributed.add(lineDiscount);
+        }
+    }
+
     private BigDecimal calculateConsecutiveWeekendsDiscount(
             PricingPromotion promotion,
-            List<PriceCalculationLineResponse> eligibleLines,
+            List<NightCalculationLine> eligibleLines,
             PriceCalculationRequest req
     ) {
         int requiredWeekends = promotion.getRequiredConsecutiveWeekends();
@@ -404,17 +481,17 @@ public class PriceCalculatorService {
             LocalDate saturday = friday.plusDays(1);
 
             boolean hasFriday = eligibleLines.stream()
-                    .anyMatch(line -> line.date().equals(friday));
+                    .anyMatch(line -> line.date.equals(friday));
 
             boolean hasSaturday = eligibleLines.stream()
-                    .anyMatch(line -> line.date().equals(saturday));
+                    .anyMatch(line -> line.date.equals(saturday));
 
             if (!hasFriday || !hasSaturday) {
                 return BigDecimal.ZERO;
             }
         }
 
-        BigDecimal eligibleSubtotal = subtotal(eligibleLines);
+        BigDecimal eligibleSubtotal = subtotalWorking(eligibleLines);
         BigDecimal discount = eligibleSubtotal.subtract(promotion.getPackagePrice());
 
         return discount.compareTo(BigDecimal.ZERO) > 0 ? discount : BigDecimal.ZERO;
@@ -515,14 +592,14 @@ public class PriceCalculatorService {
         return true;
     }
 
-    private List<PriceCalculationLineResponse> findEligibleLinesForPromotion(
+    private List<NightCalculationLine> findEligibleLinesForPromotion(
             PricingPromotion promotion,
-            List<PriceCalculationLineResponse> lines
+            List<NightCalculationLine> lines
     ) {
         return lines.stream()
-                .filter(line -> !line.date().isBefore(promotion.getStartDate()))
-                .filter(line -> !line.date().isAfter(promotion.getEndDate()))
-                .filter(line -> isPromotionDayApplicable(promotion, line.date()))
+                .filter(line -> !line.date.isBefore(promotion.getStartDate()))
+                .filter(line -> !line.date.isAfter(promotion.getEndDate()))
+                .filter(line -> isPromotionDayApplicable(promotion, line.date))
                 .toList();
     }
 
@@ -653,9 +730,22 @@ public class PriceCalculatorService {
         return rule.getDynamicBasePrice();
     }
 
-    private BigDecimal subtotal(List<PriceCalculationLineResponse> lines) {
+    private List<NightPriceBreakdownResponse> buildNightBreakdown(List<NightCalculationLine> workingLines) {
+        return workingLines.stream()
+                .map(line -> new NightPriceBreakdownResponse(
+                        line.date,
+                        line.pricingRuleName,
+                        money(line.basePrice),
+                        money(line.discountAmount),
+                        money(line.finalPrice),
+                        line.appliedPromotion
+                ))
+                .toList();
+    }
+
+    private BigDecimal subtotalWorking(List<NightCalculationLine> lines) {
         return lines.stream()
-                .map(PriceCalculationLineResponse::amount)
+                .map(line -> line.finalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -723,6 +813,31 @@ public class PriceCalculatorService {
         }
 
         return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static class NightCalculationLine {
+        private final LocalDate date;
+        private final String pricingRuleName;
+        private final BigDecimal basePrice;
+        private BigDecimal discountAmount;
+        private BigDecimal finalPrice;
+        private String appliedPromotion;
+
+        private NightCalculationLine(
+                LocalDate date,
+                String pricingRuleName,
+                BigDecimal basePrice,
+                BigDecimal discountAmount,
+                BigDecimal finalPrice,
+                String appliedPromotion
+        ) {
+            this.date = date;
+            this.pricingRuleName = pricingRuleName;
+            this.basePrice = basePrice;
+            this.discountAmount = discountAmount;
+            this.finalPrice = finalPrice;
+            this.appliedPromotion = appliedPromotion;
+        }
     }
 
     private record PromotionCalculationResult(

@@ -4,7 +4,7 @@
 // Auteur : ChatGPT
 //
 // Résumé :
-// - Réponse du calculateur de prix
+// - Réponse complète du calculateur de prix
 // - Inclut disponibilité, prix de base, rabais, total final,
 //   détail par nuit, promotions appliquées et indisponibilités
 // ============================================================
@@ -22,6 +22,7 @@ public record PriceCalculationResponse(
         BigDecimal promotionDiscountTotal,
         BigDecimal total,
         List<PriceCalculationLineResponse> lines,
+        List<NightPriceBreakdownResponse> nightBreakdown,
         List<AppliedPromotionResponse> appliedPromotions,
         List<PriceCalculationUnavailabilityResponse> unavailabilities
 ) {}
