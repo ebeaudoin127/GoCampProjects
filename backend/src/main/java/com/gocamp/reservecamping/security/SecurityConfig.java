@@ -1,13 +1,22 @@
-
 // ============================================================
 // Fichier : SecurityConfig.java
 // Chemin : backend/src/main/java/com/gocamp/reservecamping/security
-// Dernière modification : 2026-04-18
+// Dernière modification : 2026-05-06
 //
 // Résumé :
 // - Configuration Spring Security
 // - Ajout de l’accès public au dossier /uploads/**
+// - Ajout temporaire de l’accès public aux endpoints réservation
 // - Conserve JWT + CORS + authentification actuelle
+//
+// Historique des modifications :
+// 2026-04-18
+// - Ajout de l’accès public au dossier /uploads/**
+// - Conservation de JWT + CORS + authentification actuelle
+//
+// 2026-05-06
+// - Ajout de /api/reservations/** dans les routes publiques
+// - Permet de tester le module réservation sans token JWT
 // ============================================================
 
 package com.gocamp.reservecamping.security;
@@ -36,8 +45,10 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtFilter;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService,
-                          JwtAuthenticationFilter jwtFilter) {
+    public SecurityConfig(
+            CustomUserDetailsService userDetailsService,
+            JwtAuthenticationFilter jwtFilter
+    ) {
         this.userDetailsService = userDetailsService;
         this.jwtFilter = jwtFilter;
     }
@@ -47,7 +58,6 @@ public class SecurityConfig {
 
         http.csrf(csrf -> csrf.disable());
 
-        // ✔ Une seule configuration CORS (utilise le bean ci-dessous)
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         http.sessionManagement(
@@ -59,6 +69,7 @@ public class SecurityConfig {
                         "/api/auth/**",
                         "/api/countries/**",
                         "/api/province-states/**",
+                        "/api/reservations/**",
                         "/error",
                         "/favicon.ico",
                         "/logos/**",
@@ -74,11 +85,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // ✔ CORS GLOBAL
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://localhost:3000"
@@ -86,11 +97,26 @@ public class SecurityConfig {
 
         config.setAllowCredentials(true);
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+        ));
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type"
+        ));
+
+        config.setExposedHeaders(List.of(
+                "Authorization"
+        ));
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
 
         return source;
@@ -98,20 +124,27 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider();
+
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
+
         return provider;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-            throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
+
         return config.getAuthenticationManager();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder();
     }
 }

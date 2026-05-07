@@ -1,13 +1,24 @@
-
 // ============================================================
 // Fichier : frontend/src/App.jsx
-// Dernière modification : 2026-05-05
+// Dernière modification : 2026-05-06
 //
 // Résumé des modifications :
 // - Ajout promotions marketing
 // - Ajout promotions dynamiques pricing
 // - Ajout calculateur de prix
 // - Correction du conflit de routes promotions
+// - Ajout route publique temporaire /reservation-test
+//
+// Historique des modifications :
+// 2026-05-05
+// - Ajout promotions marketing
+// - Ajout promotions dynamiques pricing
+// - Ajout calculateur de prix
+// - Correction du conflit de routes promotions
+//
+// 2026-05-06
+// - Ajout import ReservationPage
+// - Ajout route publique temporaire /reservation-test
 // ============================================================
 
 import React from "react";
@@ -42,6 +53,8 @@ import CampsitePricingRulesPage from "./pages/admin/CampsitePricingRulesPage";
 import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 import PriceCalculatorPage from "./pages/admin/PriceCalculatorPage";
 
+import ReservationPage from "./pages/reservation/ReservationPage";
+
 function ScrollToTop() {
   React.useEffect(() => {
     window.scrollTo(0, 0);
@@ -73,6 +86,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/auth" element={<AuthRoute />} />
+
+      <Route path="/reservation-test" element={<ReservationPage />} />
 
       <Route
         path="/account"
@@ -212,7 +227,13 @@ function AppRoutes() {
       <Route
         path="/camping-manager"
         element={
-          <ProtectedRoute allowedRoles={["SUPER_ADMIN", "CAMPING_ADMIN", "GESTIONNAIRE"]}>
+          <ProtectedRoute
+            allowedRoles={[
+              "SUPER_ADMIN",
+              "CAMPING_ADMIN",
+              "GESTIONNAIRE",
+            ]}
+          >
             <CampingManagerHome />
           </ProtectedRoute>
         }
