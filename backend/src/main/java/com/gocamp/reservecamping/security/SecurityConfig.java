@@ -1,12 +1,13 @@
 // ============================================================
 // Fichier : SecurityConfig.java
 // Chemin : backend/src/main/java/com/gocamp/reservecamping/security
-// Dernière modification : 2026-05-06
+// Dernière modification : 2026-05-07
 //
 // Résumé :
 // - Configuration Spring Security
 // - Ajout de l’accès public au dossier /uploads/**
 // - Ajout temporaire de l’accès public aux endpoints réservation
+// - Ajout temporaire de l’accès public au moteur de recherche disponibilité
 // - Conserve JWT + CORS + authentification actuelle
 //
 // Historique des modifications :
@@ -17,6 +18,10 @@
 // 2026-05-06
 // - Ajout de /api/reservations/** dans les routes publiques
 // - Permet de tester le module réservation sans token JWT
+//
+// 2026-05-07
+// - Ajout de /api/searchavailability/** dans les routes publiques
+// - Permet de tester la recherche géographique sans token JWT
 // ============================================================
 
 package com.gocamp.reservecamping.security;
@@ -70,6 +75,7 @@ public class SecurityConfig {
                         "/api/countries/**",
                         "/api/province-states/**",
                         "/api/reservations/**",
+                        "/api/searchavailability/**",
                         "/error",
                         "/favicon.ico",
                         "/logos/**",

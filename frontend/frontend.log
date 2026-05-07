@@ -3,14 +3,8 @@
 > vite
 
 
-  VITE v5.4.21  ready in 239 ms
+  VITE v5.4.21  ready in 298 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
-23 h 45 min 00 s [vite] page reload src/components/Header.jsx
-23 h 47 min 37 s [vite] page reload src/App.jsx
-23 h 51 min 41 s [vite] page reload src/components/reservation/ReservationPage.jsx
-23 h 51 min 41 s [vite] page reload src/pages/ReservationPage.jsx
-23 h 57 min 03 s [vite] page reload src/pages/ReservationPage.jsx
-23 h 57 min 03 s [vite] page reload src/pages/reservation/ReservationPage.jsx
