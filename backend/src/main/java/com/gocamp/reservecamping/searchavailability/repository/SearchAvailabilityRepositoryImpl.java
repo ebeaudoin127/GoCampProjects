@@ -1,28 +1,41 @@
 // ============================================================
 // Fichier : SearchAvailabilityRepositoryImpl.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/repository
-// Dernière modification : 2026-05-07
+// Dernière modification : 2026-05-09
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
-// - Implémentation SQL custom du moteur de recherche disponibilité
-// - Recherche géographique avec formule Haversine
+// - Implémentation custom du moteur de recherche disponibilité
+// - Exécute les requêtes SQL natives
+// - Délègue les requêtes au selector
+// - Délègue le mapping au mapper
+// - Supporte le filtre longueur équipement
 //
 // Historique des modifications :
 // 2026-05-07
 // - Création initiale
 // - Ajout recherche géographique Haversine
+//
+// 2026-05-08
+// - Ajout recherche des terrains disponibles
+// - Refactor : extraction SQL vers SearchAvailabilitySqlSelector
+// - Refactor : extraction mapping vers SearchAvailabilityRowMapper
+//
+// 2026-05-09
+// - Ajout equipmentLengthFeet dans findAvailableCampsiteRows()
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.repository;
 
+import com.gocamp.reservecamping.searchavailability.mapper.SearchAvailabilityRowMapper;
+import com.gocamp.reservecamping.searchavailability.selector.SearchAvailabilitySqlSelector;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -32,41 +45,26 @@ public class SearchAvailabilityRepositoryImpl
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final SearchAvailabilitySqlSelector sqlSelector;
+    private final SearchAvailabilityRowMapper rowMapper;
+
+    public SearchAvailabilityRepositoryImpl(
+            SearchAvailabilitySqlSelector sqlSelector,
+            SearchAvailabilityRowMapper rowMapper
+    ) {
+        this.sqlSelector = sqlSelector;
+        this.rowMapper = rowMapper;
+    }
+
     @Override
     public List<NearbyCampgroundProjection> findNearbyCampgrounds(
             BigDecimal latitude,
             BigDecimal longitude,
             BigDecimal radiusKm
     ) {
-
-        String sql = """
-                SELECT
-                    c.id,
-                    c.name,
-                    c.gps_latitude,
-                    c.gps_longitude,
-
-                    (
-                        6371 * acos(
-                            cos(radians(:latitude))
-                            * cos(radians(c.gps_latitude))
-                            * cos(radians(c.gps_longitude) - radians(:longitude))
-                            + sin(radians(:latitude))
-                            * sin(radians(c.gps_latitude))
-                        )
-                    ) AS distance_km
-
-                FROM campground c
-
-                WHERE c.gps_latitude IS NOT NULL
-                  AND c.gps_longitude IS NOT NULL
-
-                HAVING distance_km <= :radiusKm
-
-                ORDER BY distance_km ASC
-                """;
-
-        Query query = entityManager.createNativeQuery(sql);
+        Query query = entityManager.createNativeQuery(
+                sqlSelector.nearbyCampgroundsSql()
+        );
 
         query.setParameter("latitude", latitude);
         query.setParameter("longitude", longitude);
@@ -74,41 +72,37 @@ public class SearchAvailabilityRepositoryImpl
 
         List<Object[]> rows = query.getResultList();
 
-        List<NearbyCampgroundProjection> results = new ArrayList<>();
+        return rows.stream()
+                .map(rowMapper::toNearbyCampgroundProjection)
+                .toList();
+    }
 
-        for (Object[] row : rows) {
+    @Override
+    public List<AvailableCampsiteSearchRowProjection> findAvailableCampsiteRows(
+            LocalDate arrivalDate,
+            LocalDate departureDate,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            BigDecimal radiusKm,
+            Long campgroundId,
+            BigDecimal equipmentLengthFeet
+    ) {
+        Query query = entityManager.createNativeQuery(
+                sqlSelector.availableCampsiteRowsSql()
+        );
 
-            results.add(
-                    new NearbyCampgroundProjection() {
+        query.setParameter("arrivalDate", arrivalDate);
+        query.setParameter("departureDate", departureDate);
+        query.setParameter("latitude", latitude);
+        query.setParameter("longitude", longitude);
+        query.setParameter("radiusKm", radiusKm);
+        query.setParameter("campgroundId", campgroundId);
+        query.setParameter("equipmentLengthFeet", equipmentLengthFeet);
 
-                        @Override
-                        public Long getCampgroundId() {
-                            return ((Number) row[0]).longValue();
-                        }
+        List<Object[]> rows = query.getResultList();
 
-                        @Override
-                        public String getCampgroundName() {
-                            return (String) row[1];
-                        }
-
-                        @Override
-                        public BigDecimal getGpsLatitude() {
-                            return (BigDecimal) row[2];
-                        }
-
-                        @Override
-                        public BigDecimal getGpsLongitude() {
-                            return (BigDecimal) row[3];
-                        }
-
-                        @Override
-                        public Double getDistanceKm() {
-                            return ((Number) row[4]).doubleValue();
-                        }
-                    }
-            );
-        }
-
-        return results;
+        return rows.stream()
+                .map(rowMapper::toAvailableCampsiteSearchRowProjection)
+                .toList();
     }
 }

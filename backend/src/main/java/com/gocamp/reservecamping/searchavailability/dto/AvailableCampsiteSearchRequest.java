@@ -1,27 +1,32 @@
 // ============================================================
 // Fichier : AvailableCampsiteSearchRequest.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/dto
-// Dernière modification : 2026-05-07
+// Dernière modification : 2026-05-09
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - DTO de requête pour rechercher des terrains disponibles
-// - Supporte les dates, la géolocalisation, le rayon,
-//   un camping précis et les favoris futurs
+// - Supporte dates, GPS, rayon, campground précis, équipement
+// - Supporte les filtres avancés : services, accès direct,
+//   surfaces et activités futures
 //
 // Historique des modifications :
 // 2026-05-07
 // - Création initiale du DTO
-// - Ajout arrivalDate / departureDate
-// - Ajout latitude / longitude / radiusKm
-// - Ajout campgroundId optionnel
-// - Ajout favoritesOnly pour fonctionnalité future
+//
+// 2026-05-09
+// - Ajout userId
+// - Ajout useEquipmentContext activé par défaut
+// - Ajout equipmentLengthFeet optionnel
+// - Ajout filtres avancés
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AvailableCampsiteSearchRequest {
 
@@ -33,6 +38,18 @@ public class AvailableCampsiteSearchRequest {
     private BigDecimal radiusKm;
 
     private Long campgroundId;
+    private Long userId;
+
+    private Boolean useEquipmentContext = true;
+    private BigDecimal equipmentLengthFeet;
+
+    private Boolean requiresWater = false;
+    private Boolean requiresElectricity = false;
+    private Boolean requiresSewer = false;
+    private Boolean pullThroughOnly = false;
+
+    private List<String> surfaceTypes = new ArrayList<>();
+    private List<String> activities = new ArrayList<>();
 
     private boolean favoritesOnly = false;
 
@@ -85,6 +102,78 @@ public class AvailableCampsiteSearchRequest {
 
     public void setCampgroundId(Long campgroundId) {
         this.campgroundId = campgroundId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Boolean getUseEquipmentContext() {
+        return useEquipmentContext;
+    }
+
+    public void setUseEquipmentContext(Boolean useEquipmentContext) {
+        this.useEquipmentContext = useEquipmentContext;
+    }
+
+    public BigDecimal getEquipmentLengthFeet() {
+        return equipmentLengthFeet;
+    }
+
+    public void setEquipmentLengthFeet(BigDecimal equipmentLengthFeet) {
+        this.equipmentLengthFeet = equipmentLengthFeet;
+    }
+
+    public Boolean getRequiresWater() {
+        return requiresWater;
+    }
+
+    public void setRequiresWater(Boolean requiresWater) {
+        this.requiresWater = requiresWater;
+    }
+
+    public Boolean getRequiresElectricity() {
+        return requiresElectricity;
+    }
+
+    public void setRequiresElectricity(Boolean requiresElectricity) {
+        this.requiresElectricity = requiresElectricity;
+    }
+
+    public Boolean getRequiresSewer() {
+        return requiresSewer;
+    }
+
+    public void setRequiresSewer(Boolean requiresSewer) {
+        this.requiresSewer = requiresSewer;
+    }
+
+    public Boolean getPullThroughOnly() {
+        return pullThroughOnly;
+    }
+
+    public void setPullThroughOnly(Boolean pullThroughOnly) {
+        this.pullThroughOnly = pullThroughOnly;
+    }
+
+    public List<String> getSurfaceTypes() {
+        return surfaceTypes;
+    }
+
+    public void setSurfaceTypes(List<String> surfaceTypes) {
+        this.surfaceTypes = surfaceTypes;
+    }
+
+    public List<String> getActivities() {
+        return activities;
+    }
+
+    public void setActivities(List<String> activities) {
+        this.activities = activities;
     }
 
     public boolean isFavoritesOnly() {

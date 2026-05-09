@@ -1,16 +1,33 @@
 // ============================================================
 // Fichier : EquipementsTab.jsx
-// Dernière modification : 2026-04-16
-// Résumé des modifications :
+// Chemin  : frontend/src/components
+// Dernière modification : 2026-05-09
+// Auteur : ChatGPT pour Eric Beaudoin
+//
+// Résumé :
+// - Gestion complète des équipements VR de l’utilisateur
+// - Affichage en tableau
+// - Sélection, ajout, modification et désactivation
+// - Ajout de libellés explicites, placeholders et textes d’aide
+//   dans le formulaire d’équipement
+//
+// Historique des modifications :
+// 2026-04-16
 // - Ajout d'une colonne "Sélection"
 // - Suppression de la colonne "Verrou"
 // - Affichage du cadenas verrouillé/déverrouillé à gauche de la marque
-// - Conservation du hint (tooltip) au survol du cadenas
-// - Mise en évidence beaucoup plus claire de la ligne sélectionnée
+// - Conservation du hint au survol du cadenas
+// - Mise en évidence claire de la ligne sélectionnée
 // - Affichage d'un encadré "Équipement sélectionné"
 // - Bouton Modifier l’équipement sélectionné
 // - Bouton Désactiver un équipement
-// - Préparation de la logique future hasFutureReservations sans sauvegarde en base
+// - Préparation de la logique future hasFutureReservations
+//
+// 2026-05-09
+// - Ajout de labels visibles sur tous les champs du formulaire
+// - Ajout de placeholders plus descriptifs
+// - Ajout de textes d’aide sous les champs importants
+// - Clarification des champs extension conducteur/passager
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -28,6 +45,14 @@ const emptyForm = {
   extensionPassager: "",
   actif: true,
 };
+
+function FieldHelp({ children }) {
+  return (
+    <p className="mt-1 text-xs text-gray-500">
+      {children}
+    </p>
+  );
+}
 
 export default function EquipementsTab() {
   const [equipements, setEquipements] = useState([]);
@@ -251,8 +276,8 @@ export default function EquipementsTab() {
               <th className="px-4 py-3 text-left">No série</th>
               <th className="px-4 py-3 text-left">No plaque</th>
               <th className="px-4 py-3 text-left">Extension</th>
-              <th className="px-4 py-3 text-left">Nb ext. conducteur</th>
-              <th className="px-4 py-3 text-left">Nb ext. passager</th>
+              <th className="px-4 py-3 text-left">Ext. conducteur</th>
+              <th className="px-4 py-3 text-left">Ext. passager</th>
               <th className="px-4 py-3 text-left">État</th>
             </tr>
           </thead>
@@ -394,11 +419,6 @@ export default function EquipementsTab() {
               : "bg-amber-300 cursor-not-allowed"
           }`}
           disabled={!selectedEquipement || selectedIsLocked}
-          title={
-            selectedIsLocked
-              ? "Modification impossible : cet équipement a des réservations futures."
-              : ""
-          }
         >
           Modifier l’équipement sélectionné
         </button>
@@ -423,45 +443,77 @@ export default function EquipementsTab() {
           </h3>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <input
-              className="border p-3 w-full rounded bg-white"
-              value={form.marque}
-              onChange={(e) => updateField("marque", e.target.value)}
-              placeholder="Marque"
-            />
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
+                Marque
+              </label>
+              <input
+                className="border p-3 w-full rounded bg-white"
+                value={form.marque}
+                onChange={(e) => updateField("marque", e.target.value)}
+                placeholder="Ex. Grey Wolf, Jayco, Shasta"
+              />
+              <FieldHelp>Nom du fabricant ou de la marque de l’équipement.</FieldHelp>
+            </div>
 
-            <input
-              className="border p-3 w-full rounded bg-white"
-              value={form.modele}
-              onChange={(e) => updateField("modele", e.target.value)}
-              placeholder="Modèle"
-            />
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
+                Modèle
+              </label>
+              <input
+                className="border p-3 w-full rounded bg-white"
+                value={form.modele}
+                onChange={(e) => updateField("modele", e.target.value)}
+                placeholder="Ex. 301BH, 30QB"
+              />
+              <FieldHelp>Modèle exact de la roulotte, tente-roulotte ou VR.</FieldHelp>
+            </div>
 
-            <input
-              type="number"
-              className="border p-3 w-full rounded bg-white"
-              value={form.longueur}
-              onChange={(e) => updateField("longueur", e.target.value)}
-              placeholder="Longueur (pieds)"
-            />
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
+                Longueur de l’équipement
+              </label>
+              <input
+                type="number"
+                className="border p-3 w-full rounded bg-white"
+                value={form.longueur}
+                onChange={(e) => updateField("longueur", e.target.value)}
+                placeholder="Ex. 37"
+              />
+              <FieldHelp>
+                Longueur totale en pieds. Cette valeur sert à valider les terrains compatibles.
+              </FieldHelp>
+            </div>
 
-            <input
-              className="border p-3 w-full rounded bg-white"
-              value={form.noSerie}
-              onChange={(e) => updateField("noSerie", e.target.value)}
-              placeholder="Numéro de série"
-            />
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
+                Numéro de série
+              </label>
+              <input
+                className="border p-3 w-full rounded bg-white"
+                value={form.noSerie}
+                onChange={(e) => updateField("noSerie", e.target.value)}
+                placeholder="Ex. 1X876"
+              />
+              <FieldHelp>Numéro d’identification ou numéro de série de l’équipement.</FieldHelp>
+            </div>
 
-            <input
-              className="border p-3 w-full rounded bg-white md:col-span-2"
-              value={form.noPlaque}
-              onChange={(e) => updateField("noPlaque", e.target.value)}
-              placeholder="Numéro de plaque"
-            />
+            <div className="md:col-span-2">
+              <label className="mb-1 block text-sm font-semibold text-gray-700">
+                Numéro de plaque
+              </label>
+              <input
+                className="border p-3 w-full rounded bg-white"
+                value={form.noPlaque}
+                onChange={(e) => updateField("noPlaque", e.target.value)}
+                placeholder="Ex. R6754"
+              />
+              <FieldHelp>Numéro de plaque d’immatriculation, si applicable.</FieldHelp>
+            </div>
           </div>
 
-          <div className="mt-4">
-            <label className="flex items-center gap-2">
+          <div className="mt-5 rounded-lg border border-gray-200 bg-white p-4">
+            <label className="flex items-center gap-2 font-semibold text-gray-700">
               <input
                 type="checkbox"
                 checked={form.hasExtension}
@@ -469,34 +521,54 @@ export default function EquipementsTab() {
               />
               <span>A des extensions (Slide-Out)</span>
             </label>
+
+            <FieldHelp>
+              Coche cette option si l’équipement possède des extensions latérales.
+            </FieldHelp>
           </div>
 
           {form.hasExtension && (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <input
-                type="number"
-                className="border p-3 w-full rounded bg-white"
-                value={form.extensionConducteur}
-                onChange={(e) =>
-                  updateField("extensionConducteur", e.target.value)
-                }
-                placeholder="Nombre extension conducteur"
-              />
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  Nombre d’extensions côté conducteur
+                </label>
+                <input
+                  type="number"
+                  className="border p-3 w-full rounded bg-white"
+                  value={form.extensionConducteur}
+                  onChange={(e) =>
+                    updateField("extensionConducteur", e.target.value)
+                  }
+                  placeholder="Ex. 2"
+                />
+                <FieldHelp>
+                  Nombre d’extensions qui sortent du côté conducteur.
+                </FieldHelp>
+              </div>
 
-              <input
-                type="number"
-                className="border p-3 w-full rounded bg-white"
-                value={form.extensionPassager}
-                onChange={(e) =>
-                  updateField("extensionPassager", e.target.value)
-                }
-                placeholder="Nombre extension passager"
-              />
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  Nombre d’extensions côté passager
+                </label>
+                <input
+                  type="number"
+                  className="border p-3 w-full rounded bg-white"
+                  value={form.extensionPassager}
+                  onChange={(e) =>
+                    updateField("extensionPassager", e.target.value)
+                  }
+                  placeholder="Ex. 0"
+                />
+                <FieldHelp>
+                  Nombre d’extensions qui sortent du côté passager.
+                </FieldHelp>
+              </div>
             </div>
           )}
 
-          <div className="mt-4">
-            <label className="flex items-center gap-2">
+          <div className="mt-5 rounded-lg border border-gray-200 bg-white p-4">
+            <label className="flex items-center gap-2 font-semibold text-gray-700">
               <input
                 type="checkbox"
                 checked={form.actif}
@@ -504,6 +576,10 @@ export default function EquipementsTab() {
               />
               <span>Équipement actif</span>
             </label>
+
+            <FieldHelp>
+              L’équipement actif est celui utilisé pour les recherches et validations de réservation.
+            </FieldHelp>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
