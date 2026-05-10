@@ -1,12 +1,24 @@
 // ============================================================
 // Fichier : frontend/src/pages/admin/CreateCampsitePage.jsx
-// Dernière modification : 2026-04-20
+// Dernière modification : 2026-05-09
 //
 // Résumé :
 // - Création d’un site
 // - Charge toutes les références configurables
 // - Ajout du champ valeur de tarification
-// - Ajout du bouton + avec modal pour créer une valeur liée au camping
+// - Remplacement Type de service par cases Eau / Électricité / Égout
+// - Remplacement Ampérage par cases 15/20A / 30A / 50A
+//
+// Historique des modifications :
+// 2026-04-20
+// - Création d’un site
+// - Charge toutes les références configurables
+// - Ajout du champ valeur de tarification
+//
+// 2026-05-09
+// - Ajout hasWater / hasElectricity / hasSewer
+// - Ajout has15_20Amp / has30Amp / has50Amp
+// - Retrait visuel des anciens dropdowns Type de service / Ampérage
 // ============================================================
 
 import React, { useEffect, useState } from "react";
@@ -20,6 +32,12 @@ const initialForm = {
   siteTypeId: "",
   siteServiceTypeId: "",
   siteAmperageId: "",
+  hasWater: false,
+  hasElectricity: false,
+  hasSewer: false,
+  has15_20Amp: false,
+  has30Amp: false,
+  has50Amp: false,
   pricingOptionId: "",
   widthFeet: "",
   lengthFeet: "",
@@ -39,8 +57,6 @@ export default function CreateCampsitePage() {
   const [form, setForm] = useState(initialForm);
 
   const [siteTypes, setSiteTypes] = useState([]);
-  const [serviceTypes, setServiceTypes] = useState([]);
-  const [amperages, setAmperages] = useState([]);
   const [equipmentTypes, setEquipmentTypes] = useState([]);
   const [surfaceTypes, setSurfaceTypes] = useState([]);
 
@@ -58,23 +74,17 @@ export default function CreateCampsitePage() {
         const [
           campgroundData,
           siteTypesData,
-          serviceTypesData,
-          amperagesData,
           equipmentData,
           surfacesData,
         ] = await Promise.all([
           api.get(`/campgrounds/${campgroundId}`),
           api.get("/campsite-references/site-types"),
-          api.get("/campsite-references/site-service-types"),
-          api.get("/campsite-references/site-amperages"),
           api.get("/campsite-references/equipment-allowed-types"),
           api.get("/campsite-references/site-surface-types"),
         ]);
 
         setCampground(campgroundData || null);
         setSiteTypes(Array.isArray(siteTypesData) ? siteTypesData : []);
-        setServiceTypes(Array.isArray(serviceTypesData) ? serviceTypesData : []);
-        setAmperages(Array.isArray(amperagesData) ? amperagesData : []);
         setEquipmentTypes(Array.isArray(equipmentData) ? equipmentData : []);
         setSurfaceTypes(Array.isArray(surfacesData) ? surfacesData : []);
       } catch (err) {
@@ -118,8 +128,18 @@ export default function CreateCampsitePage() {
         campgroundId: Number(campgroundId),
         siteCode: form.siteCode,
         siteTypeId: form.siteTypeId ? Number(form.siteTypeId) : null,
-        siteServiceTypeId: form.siteServiceTypeId ? Number(form.siteServiceTypeId) : null,
-        siteAmperageId: form.siteAmperageId ? Number(form.siteAmperageId) : null,
+
+        siteServiceTypeId: null,
+        siteAmperageId: null,
+
+        hasWater: !!form.hasWater,
+        hasElectricity: !!form.hasElectricity,
+        hasSewer: !!form.hasSewer,
+
+        has15_20Amp: !!form.has15_20Amp,
+        has30Amp: !!form.has30Amp,
+        has50Amp: !!form.has50Amp,
+
         pricingOptionId: form.pricingOptionId ? Number(form.pricingOptionId) : null,
         widthFeet: form.widthFeet === "" ? null : Number(form.widthFeet),
         lengthFeet: form.lengthFeet === "" ? null : Number(form.lengthFeet),
@@ -170,6 +190,7 @@ export default function CreateCampsitePage() {
           <h1 className="text-3xl font-bold text-slate-900 mt-4">
             Ajouter un site
           </h1>
+
           <p className="text-slate-600 mt-2">
             {campground ? `Camping : ${campground.name}` : ""}
           </p>
@@ -203,40 +224,54 @@ export default function CreateCampsitePage() {
                 </select>
               </Field>
 
-              <Field label="Type de service">
-                <select
-                  value={form.siteServiceTypeId}
-                  onChange={(e) => updateField("siteServiceTypeId", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                >
-                  <option value="">Choisir un service</option>
-                  {serviceTypes.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.nameFr}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Ampérage">
-                <select
-                  value={form.siteAmperageId}
-                  onChange={(e) => updateField("siteAmperageId", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                >
-                  <option value="">Choisir un ampérage</option>
-                  {amperages.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.nameFr}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
               <CampsitePricingOptionField
                 campgroundId={Number(campgroundId)}
                 value={form.pricingOptionId}
                 onChange={(value) => updateField("pricingOptionId", value)}
+              />
+            </div>
+          </Section>
+
+          <Section title="Services disponibles sur le site">
+            <div className="grid gap-4 md:grid-cols-3">
+              <CheckboxField
+                label="Eau"
+                checked={form.hasWater}
+                onChange={(value) => updateField("hasWater", value)}
+              />
+
+              <CheckboxField
+                label="Électricité"
+                checked={form.hasElectricity}
+                onChange={(value) => updateField("hasElectricity", value)}
+              />
+
+              <CheckboxField
+                label="Égout"
+                checked={form.hasSewer}
+                onChange={(value) => updateField("hasSewer", value)}
+              />
+            </div>
+          </Section>
+
+          <Section title="Ampérage disponible sur le site">
+            <div className="grid gap-4 md:grid-cols-3">
+              <CheckboxField
+                label="15/20 Amp"
+                checked={form.has15_20Amp}
+                onChange={(value) => updateField("has15_20Amp", value)}
+              />
+
+              <CheckboxField
+                label="30 Amp"
+                checked={form.has30Amp}
+                onChange={(value) => updateField("has30Amp", value)}
+              />
+
+              <CheckboxField
+                label="50 Amp"
+                checked={form.has50Amp}
+                onChange={(value) => updateField("has50Amp", value)}
               />
             </div>
           </Section>
@@ -248,11 +283,13 @@ export default function CreateCampsitePage() {
                 value={form.widthFeet}
                 onChange={(value) => updateField("widthFeet", value)}
               />
+
               <NumberField
                 label="Longueur (pi)"
                 value={form.lengthFeet}
                 onChange={(value) => updateField("lengthFeet", value)}
               />
+
               <NumberField
                 label="Longueur max équipement (pi)"
                 value={form.maxEquipmentLengthFeet}
@@ -268,6 +305,7 @@ export default function CreateCampsitePage() {
                 checked={form.isPullThrough}
                 onChange={(value) => updateField("isPullThrough", value)}
               />
+
               <CheckboxField
                 label="Site actif"
                 checked={form.isActive}
@@ -391,7 +429,7 @@ function NumberField({ label, value, onChange }) {
 
 function CheckboxField({ label, checked, onChange }) {
   return (
-    <label className="inline-flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer">
+    <label className="inline-flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer hover:bg-slate-50">
       <input
         type="checkbox"
         checked={checked}

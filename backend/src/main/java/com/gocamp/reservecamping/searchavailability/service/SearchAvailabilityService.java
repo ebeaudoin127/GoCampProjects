@@ -8,6 +8,8 @@
 // - Service principal du moteur de recherche disponibilité
 // - Recherche géographique des campgrounds
 // - Génère un résumé intelligent des disponibilités
+// - Garde l’aperçu à 5 terrains par camping
+// - Ajoute la liste complète des terrains disponibles
 // - Utilise l’équipement actif du user comme contexte par défaut
 // - Applique les filtres avancés : services, accès direct, surfaces
 //
@@ -23,6 +25,7 @@
 // - Ajout contexte équipement
 // - Ajout photos
 // - Ajout filtres avancés
+// - Ajout allCampsites pour affichage complet paginé côté frontend
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.service;
@@ -33,6 +36,7 @@ import com.gocamp.reservecamping.searchavailability.dto.AvailableCampsiteSearchR
 import com.gocamp.reservecamping.searchavailability.dto.SearchAvailabilitySummaryResponse;
 import com.gocamp.reservecamping.searchavailability.dto.SearchCampgroundSummaryDto;
 import com.gocamp.reservecamping.searchavailability.dto.SearchCampsitePreviewDto;
+import com.gocamp.reservecamping.searchavailability.dto.SearchCampsiteResultDto;
 import com.gocamp.reservecamping.searchavailability.repository.AvailableCampsiteSearchRowProjection;
 import com.gocamp.reservecamping.searchavailability.repository.NearbyCampgroundProjection;
 import com.gocamp.reservecamping.searchavailability.repository.SearchAvailabilityRepositoryCustom;
@@ -84,6 +88,8 @@ public class SearchAvailabilityService {
         BigDecimal equipmentLengthFeet =
                 resolveEquipmentLengthFeet(request);
 
+        applyEquipmentDefaultSearchPreferences(request);
+
         List<AvailableCampsiteSearchRowProjection> rows =
                 repository.findAvailableCampsiteRows(
                         request.getArrivalDate(),
@@ -98,6 +104,9 @@ public class SearchAvailabilityService {
         Map<Long, SearchCampgroundSummaryDto> grouped =
                 new LinkedHashMap<>();
 
+        List<SearchCampsiteResultDto> allCampsites =
+                new ArrayList<>();
+
         int totalCampsites = 0;
         int previewRowsUsed = 0;
 
@@ -107,6 +116,10 @@ public class SearchAvailabilityService {
             }
 
             totalCampsites++;
+
+            allCampsites.add(
+                    createCampsiteResult(row)
+            );
 
             SearchCampgroundSummaryDto campgroundDto =
                     grouped.computeIfAbsent(
@@ -146,8 +159,56 @@ public class SearchAvailabilityService {
         response.setCampgrounds(
                 grouped.values().stream().toList()
         );
+        response.setAllCampsites(allCampsites);
 
         return response;
+    }
+
+    private void applyEquipmentDefaultSearchPreferences(
+            AvailableCampsiteSearchRequest request
+    ) {
+        boolean useEquipmentContext =
+                !Boolean.FALSE.equals(request.getUseEquipmentContext());
+
+        if (!useEquipmentContext || request.getUserId() == null) {
+            return;
+        }
+
+        EquipementVR activeEquipment =
+                findActiveEquipment(
+                        equipementVRRepository.findByUserId(request.getUserId())
+                );
+
+        if (activeEquipment == null) {
+            return;
+        }
+
+        request.setRequiresWater(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequiresWater())
+        );
+
+        request.setRequiresSewer(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequiresSewer())
+        );
+
+        request.setRequiresElectricity(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequiresElectricity())
+                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires15_20Amp())
+                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires30Amp())
+                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires50Amp())
+        );
+
+        request.setRequires15_20Amp(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequires15_20Amp())
+        );
+
+        request.setRequires30Amp(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequires30Amp())
+        );
+
+        request.setRequires50Amp(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequires50Amp())
+        );
     }
 
     private boolean matchesAdvancedFilters(
@@ -174,17 +235,21 @@ public class SearchAvailabilityService {
         }
 
         if (
-                Boolean.TRUE.equals(request.getRequiresElectricity())
-                        && !containsAny(serviceText, "electric", "electrique", "electricite")
-        ) {
-            return false;
-        }
-
-        if (
                 Boolean.TRUE.equals(request.getRequiresSewer())
                         && !containsAny(serviceText, "egout", "sewer")
         ) {
             return false;
+        }
+
+        if (Boolean.TRUE.equals(request.getRequiresElectricity())) {
+            boolean hasMatchingAmp =
+                    Boolean.TRUE.equals(request.getRequires15_20Amp())
+                            || Boolean.TRUE.equals(request.getRequires30Amp())
+                            || Boolean.TRUE.equals(request.getRequires50Amp());
+
+            if (!hasMatchingAmp) {
+                return false;
+            }
         }
 
         if (
@@ -325,6 +390,25 @@ public class SearchAvailabilityService {
                 row.getMaxEquipmentLengthFeet()
         );
 
+        dto.setPhotoUrls(buildPhotoUrls(row));
+
+        return dto;
+    }
+
+    private SearchCampsiteResultDto createCampsiteResult(
+            AvailableCampsiteSearchRowProjection row
+    ) {
+        SearchCampsiteResultDto dto =
+                new SearchCampsiteResultDto();
+
+        dto.setCampgroundId(row.getCampgroundId());
+        dto.setCampgroundName(row.getCampgroundName());
+        dto.setDistanceKm(row.getDistanceKm());
+        dto.setCampsiteId(row.getCampsiteId());
+        dto.setSiteCode(row.getSiteCode());
+        dto.setMaxEquipmentLengthFeet(
+                row.getMaxEquipmentLengthFeet()
+        );
         dto.setPhotoUrls(buildPhotoUrls(row));
 
         return dto;

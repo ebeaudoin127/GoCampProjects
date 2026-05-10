@@ -1,23 +1,29 @@
 // ============================================================
-// Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/service/CampsiteService.java
-// Dernière modification : 2026-04-20
+// Fichier : CampsiteService.java
+// Chemin  : backend/src/main/java/com/gocamp/reservecamping/campsite/service
+// Dernière modification : 2026-05-09
+// Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Service métier des sites
 // - Gestion création / modification
-// - Ajout de la sauvegarde du polygone de carte
-// - Ajout de la valeur de tarification par site
-// - Correction JPA : recharge le site avant de sauvegarder
-//   l’affectation tarifaire pour éviter l’erreur
-//   "detached entity passed to persist"
-// - Ajout de pricingOptionId / pricingOptionName dans la
-//   liste des sites pour supporter la tarification par regroupement
+// - Gestion polygone de carte
+// - Gestion tarification par site
+// - Ajout services disponibles et ampérages disponibles
 //
-// ------------------------------------------------------------
-// MODIFICATIONS (2026-04-29)
-// - Ajout de deleteMapShape(Long id)
-// - Permet de supprimer/réinitialiser le polygone d’un site en BD
-// - Met à null : mapPolygonJson, labelX, labelY
+// Historique des modifications :
+// 2026-04-20
+// - Ajout pricingOptionId / pricingOptionName
+// - Correction JPA detached entity passed to persist
+//
+// 2026-04-29
+// - Ajout deleteMapShape(Long id)
+//
+// 2026-05-09
+// - Ajout sauvegarde hasWater / hasElectricity / hasSewer
+// - Ajout sauvegarde has15_20Amp / has30Amp / has50Amp
+// - Ajout des nouveaux champs dans CampsiteDetailsResponse
+// - Ajout des nouveaux champs dans CampsiteResponse
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.service;
@@ -117,6 +123,12 @@ public class CampsiteService {
                 req.siteTypeId(),
                 req.siteServiceTypeId(),
                 req.siteAmperageId(),
+                req.hasWater(),
+                req.hasElectricity(),
+                req.hasSewer(),
+                req.has15_20Amp(),
+                req.has30Amp(),
+                req.has50Amp(),
                 req.widthFeet(),
                 req.lengthFeet(),
                 req.maxEquipmentLengthFeet(),
@@ -156,18 +168,31 @@ public class CampsiteService {
                 .map(x -> x.getSiteSurfaceType().getId())
                 .toList();
 
-        var pricingAssignment = pricingAssignmentRepository.findByCampsiteId(id).orElse(null);
+        var pricingAssignment = pricingAssignmentRepository.findByCampsiteId(id)
+                .orElse(null);
 
         return new CampsiteDetailsResponse(
                 c.getId(),
                 c.getCampground().getId(),
                 c.getSiteCode(),
+
                 c.getSiteType() != null ? c.getSiteType().getId() : null,
                 c.getSiteType() != null ? c.getSiteType().getNameFr() : null,
+
                 c.getSiteServiceType() != null ? c.getSiteServiceType().getId() : null,
                 c.getSiteServiceType() != null ? c.getSiteServiceType().getNameFr() : null,
+
                 c.getSiteAmperage() != null ? c.getSiteAmperage().getId() : null,
                 c.getSiteAmperage() != null ? c.getSiteAmperage().getNameFr() : null,
+
+                c.isHasWater(),
+                c.isHasElectricity(),
+                c.isHasSewer(),
+
+                c.isHas15_20Amp(),
+                c.isHas30Amp(),
+                c.isHas50Amp(),
+
                 c.getWidthFeet(),
                 c.getLengthFeet(),
                 c.getMaxEquipmentLengthFeet(),
@@ -198,6 +223,12 @@ public class CampsiteService {
                 req.siteTypeId(),
                 req.siteServiceTypeId(),
                 req.siteAmperageId(),
+                req.hasWater(),
+                req.hasElectricity(),
+                req.hasSewer(),
+                req.has15_20Amp(),
+                req.has30Amp(),
+                req.has50Amp(),
                 req.widthFeet(),
                 req.lengthFeet(),
                 req.maxEquipmentLengthFeet(),
@@ -228,10 +259,6 @@ public class CampsiteService {
         entityManager.flush();
     }
 
-    // ============================================================
-    // MODIFICATION 2026-04-29
-    // Supprime/réinitialise le polygone enregistré en base de données.
-    // ============================================================
     public void deleteMapShape(Long id) {
         Campsite campsite = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Site introuvable"));
@@ -250,6 +277,15 @@ public class CampsiteService {
             Long siteTypeId,
             Long siteServiceTypeId,
             Long siteAmperageId,
+
+            Boolean hasWater,
+            Boolean hasElectricity,
+            Boolean hasSewer,
+
+            Boolean has15_20Amp,
+            Boolean has30Amp,
+            Boolean has50Amp,
+
             BigDecimal widthFeet,
             BigDecimal lengthFeet,
             BigDecimal maxEquipmentLengthFeet,
@@ -258,12 +294,33 @@ public class CampsiteService {
             String notes
     ) {
         c.setSiteCode(siteCode != null ? siteCode.trim() : null);
-        c.setSiteType(siteTypeId != null ? siteTypeRepository.findById(siteTypeId)
-                .orElseThrow(() -> new RuntimeException("Type de site invalide")) : null);
-        c.setSiteServiceType(siteServiceTypeId != null ? siteServiceTypeRepository.findById(siteServiceTypeId)
-                .orElseThrow(() -> new RuntimeException("Type de service invalide")) : null);
-        c.setSiteAmperage(siteAmperageId != null ? siteAmperageRepository.findById(siteAmperageId)
-                .orElseThrow(() -> new RuntimeException("Ampérage invalide")) : null);
+
+        c.setSiteType(siteTypeId != null
+                ? siteTypeRepository.findById(siteTypeId)
+                .orElseThrow(() -> new RuntimeException("Type de site invalide"))
+                : null
+        );
+
+        c.setSiteServiceType(siteServiceTypeId != null
+                ? siteServiceTypeRepository.findById(siteServiceTypeId)
+                .orElseThrow(() -> new RuntimeException("Type de service invalide"))
+                : null
+        );
+
+        c.setSiteAmperage(siteAmperageId != null
+                ? siteAmperageRepository.findById(siteAmperageId)
+                .orElseThrow(() -> new RuntimeException("Ampérage invalide"))
+                : null
+        );
+
+        c.setHasWater(Boolean.TRUE.equals(hasWater));
+        c.setHasElectricity(Boolean.TRUE.equals(hasElectricity));
+        c.setHasSewer(Boolean.TRUE.equals(hasSewer));
+
+        c.setHas15_20Amp(Boolean.TRUE.equals(has15_20Amp));
+        c.setHas30Amp(Boolean.TRUE.equals(has30Amp));
+        c.setHas50Amp(Boolean.TRUE.equals(has50Amp));
+
         c.setWidthFeet(widthFeet);
         c.setLengthFeet(lengthFeet);
         c.setMaxEquipmentLengthFeet(maxEquipmentLengthFeet);
@@ -272,53 +329,70 @@ public class CampsiteService {
         c.setNotes(notes);
     }
 
-    private void replaceEquipmentAllowed(Long campsiteId, List<Long> equipmentIds) {
+    private void replaceEquipmentAllowed(
+            Long campsiteId,
+            List<Long> equipmentIds
+    ) {
         campsiteEquipmentAllowedRepository.deleteAllByCampsiteId(campsiteId);
         entityManager.flush();
         entityManager.clear();
 
         Campsite campsite = repository.findById(campsiteId)
-                .orElseThrow(() -> new RuntimeException("Site introuvable après suppression des équipements autorisés."));
+                .orElseThrow(() ->
+                        new RuntimeException("Site introuvable après suppression des équipements autorisés."));
 
-        List<Long> safeIds = equipmentIds != null ? equipmentIds : Collections.emptyList();
+        List<Long> safeIds =
+                equipmentIds != null ? equipmentIds : Collections.emptyList();
 
         for (Long equipmentId : safeIds) {
             EquipmentAllowedType type = equipmentAllowedTypeRepository.findById(equipmentId)
-                    .orElseThrow(() -> new RuntimeException("Type d'équipement autorisé invalide : " + equipmentId));
+                    .orElseThrow(() ->
+                            new RuntimeException("Type d'équipement autorisé invalide : " + equipmentId));
 
             CampsiteEquipmentAllowed link = new CampsiteEquipmentAllowed();
             link.setCampsite(campsite);
             link.setEquipmentAllowedType(type);
+
             campsiteEquipmentAllowedRepository.save(link);
         }
 
         entityManager.flush();
     }
 
-    private void replaceSurfaceTypes(Long campsiteId, List<Long> surfaceIds) {
+    private void replaceSurfaceTypes(
+            Long campsiteId,
+            List<Long> surfaceIds
+    ) {
         campsiteSurfaceTypeRepository.deleteAllByCampsiteId(campsiteId);
         entityManager.flush();
         entityManager.clear();
 
         Campsite campsite = repository.findById(campsiteId)
-                .orElseThrow(() -> new RuntimeException("Site introuvable après suppression des surfaces."));
+                .orElseThrow(() ->
+                        new RuntimeException("Site introuvable après suppression des surfaces."));
 
-        List<Long> safeIds = surfaceIds != null ? surfaceIds : Collections.emptyList();
+        List<Long> safeIds =
+                surfaceIds != null ? surfaceIds : Collections.emptyList();
 
         for (Long surfaceId : safeIds) {
             SiteSurfaceType type = siteSurfaceTypeRepository.findById(surfaceId)
-                    .orElseThrow(() -> new RuntimeException("Type de surface invalide : " + surfaceId));
+                    .orElseThrow(() ->
+                            new RuntimeException("Type de surface invalide : " + surfaceId));
 
             CampsiteSurfaceType link = new CampsiteSurfaceType();
             link.setCampsite(campsite);
             link.setSiteSurfaceType(type);
+
             campsiteSurfaceTypeRepository.save(link);
         }
 
         entityManager.flush();
     }
 
-    private void replacePricingAssignment(Long campsiteId, Long pricingOptionId) {
+    private void replacePricingAssignment(
+            Long campsiteId,
+            Long pricingOptionId
+    ) {
         pricingAssignmentRepository.deleteByCampsiteId(campsiteId);
         entityManager.flush();
         entityManager.clear();
@@ -328,13 +402,20 @@ public class CampsiteService {
         }
 
         Campsite managedCampsite = repository.findById(campsiteId)
-                .orElseThrow(() -> new RuntimeException("Site introuvable lors de l'affectation tarifaire."));
+                .orElseThrow(() ->
+                        new RuntimeException("Site introuvable lors de l'affectation tarifaire."));
 
         CampgroundSitePricingOption option = pricingOptionRepository
-                .findByIdAndCampgroundId(pricingOptionId, managedCampsite.getCampground().getId())
-                .orElseThrow(() -> new RuntimeException("Valeur de tarification invalide pour ce camping."));
+                .findByIdAndCampgroundId(
+                        pricingOptionId,
+                        managedCampsite.getCampground().getId()
+                )
+                .orElseThrow(() ->
+                        new RuntimeException("Valeur de tarification invalide pour ce camping."));
 
-        CampsitePricingAssignment assignment = new CampsitePricingAssignment();
+        CampsitePricingAssignment assignment =
+                new CampsitePricingAssignment();
+
         assignment.setCampsite(managedCampsite);
         assignment.setPricingOption(option);
 
@@ -343,14 +424,26 @@ public class CampsiteService {
     }
 
     private CampsiteResponse toResponse(Campsite c) {
-        var pricingAssignment = pricingAssignmentRepository.findByCampsiteId(c.getId()).orElse(null);
+        var pricingAssignment =
+                pricingAssignmentRepository.findByCampsiteId(c.getId())
+                        .orElse(null);
 
         return new CampsiteResponse(
                 c.getId(),
                 c.getSiteCode(),
+
                 c.getSiteType() != null ? c.getSiteType().getNameFr() : null,
                 c.getSiteServiceType() != null ? c.getSiteServiceType().getNameFr() : null,
                 c.getSiteAmperage() != null ? c.getSiteAmperage().getNameFr() : null,
+
+                c.isHasWater(),
+                c.isHasElectricity(),
+                c.isHasSewer(),
+
+                c.isHas15_20Amp(),
+                c.isHas30Amp(),
+                c.isHas50Amp(),
+
                 c.getWidthFeet(),
                 c.getLengthFeet(),
                 c.isPullThrough(),

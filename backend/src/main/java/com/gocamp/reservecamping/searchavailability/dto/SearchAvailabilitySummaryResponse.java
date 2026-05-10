@@ -1,17 +1,13 @@
 // ============================================================
 // Fichier : SearchAvailabilitySummaryResponse.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/dto
-// Dernière modification : 2026-05-08
+// Dernière modification : 2026-05-09
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
-// - DTO de réponse du résumé intelligent de recherche
-// - Contient les totaux cliquables et un aperçu limité
-//   des campings et terrains disponibles
-//
-// Historique des modifications :
-// 2026-05-08
-// - Création initiale du DTO
+// - DTO résumé de recherche disponibilité
+// - Conserve l’aperçu 5 terrains par camping
+// - Ajoute allCampsites pour la page complète des terrains
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.dto;
@@ -23,12 +19,11 @@ public class SearchAvailabilitySummaryResponse {
 
     private int totalCampgrounds;
     private int totalCampsites;
+    private int previewMaxRows;
+    private int previewCampsitesPerCampground;
 
-    private int previewMaxRows = 40;
-    private int previewCampsitesPerCampground = 5;
-
-    private List<SearchCampgroundSummaryDto> campgrounds =
-            new ArrayList<>();
+    private List<SearchCampgroundSummaryDto> campgrounds = new ArrayList<>();
+    private List<SearchCampsiteResultDto> allCampsites = new ArrayList<>();
 
     public int getTotalCampgrounds() {
         return totalCampgrounds;
@@ -58,20 +53,23 @@ public class SearchAvailabilitySummaryResponse {
         return previewCampsitesPerCampground;
     }
 
-    public void setPreviewCampsitesPerCampground(
-            int previewCampsitesPerCampground
-    ) {
-        this.previewCampsitesPerCampground =
-                previewCampsitesPerCampground;
+    public void setPreviewCampsitesPerCampground(int previewCampsitesPerCampground) {
+        this.previewCampsitesPerCampground = previewCampsitesPerCampground;
     }
 
     public List<SearchCampgroundSummaryDto> getCampgrounds() {
         return campgrounds;
     }
 
-    public void setCampgrounds(
-            List<SearchCampgroundSummaryDto> campgrounds
-    ) {
+    public void setCampgrounds(List<SearchCampgroundSummaryDto> campgrounds) {
         this.campgrounds = campgrounds;
+    }
+
+    public List<SearchCampsiteResultDto> getAllCampsites() {
+        return allCampsites;
+    }
+
+    public void setAllCampsites(List<SearchCampsiteResultDto> allCampsites) {
+        this.allCampsites = allCampsites;
     }
 }

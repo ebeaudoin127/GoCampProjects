@@ -1,22 +1,29 @@
-
-
 // ============================================================
 // Fichier : frontend/src/pages/admin/CampsitesPage.jsx
-// Dernière modification : 2026-04-29
+// Dernière modification : 2026-05-09
 //
 // Résumé :
 // - Liste des sites d’un camping
 // - Conserve toutes les colonnes existantes
-// - Ajout de la colonne "Regroupement" entre Code et Type
-// - Ajout du bouton "Voir sur la carte" à côté de "Modifier"
+// - Affiche les services à partir des nouveaux champs booléens
+// - Affiche les ampérages disponibles à partir des nouveaux champs booléens
+// - Renomme la colonne "Ampérage" en "Amp sur le site"
 // - Badge "Actif" rouge si contour non fait ou photos < 3
-// - Sous le badge Actif :
-//      1) Contour : Fait / À faire
-//      2) Photos : x/3
+// - Correction du tri naturel des codes de site
+//
+// Historique des modifications :
+// 2026-04-29
+// - Ajout de la colonne "Regroupement"
+// - Ajout du bouton "Voir sur la carte"
+// - Badge "Actif" rouge si contour non fait ou photos < 3
 // - Ajout du bouton "Établir la tarification"
-// - Correction du tri naturel des codes de site :
-//      1, 2, 3, 10
-//      A101, A102, A103, B101
+// - Correction du tri naturel des codes de site
+//
+// 2026-05-09
+// - Ajout formatServices()
+// - Ajout formatAmperages()
+// - Remplacement affichage siteServiceTypeName par hasWater/hasElectricity/hasSewer
+// - Remplacement affichage siteAmperageName par has15_20Amp/has30Amp/has50Amp
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -42,6 +49,50 @@ function getPhotoCount(site) {
 
 function isSiteComplete(site) {
   return hasPolygon(site) && getPhotoCount(site) >= 3;
+}
+
+function formatServices(site) {
+  const services = [];
+
+  if (site.hasWater) {
+    services.push("Eau");
+  }
+
+  if (site.hasElectricity) {
+    services.push("Électricité");
+  }
+
+  if (site.hasSewer) {
+    services.push("Égout");
+  }
+
+  if (services.length > 0) {
+    return services.join(" + ");
+  }
+
+  return site.siteServiceTypeName || "-";
+}
+
+function formatAmperages(site) {
+  const amperages = [];
+
+  if (site.has15_20Amp) {
+    amperages.push("15/20 Amp");
+  }
+
+  if (site.has30Amp) {
+    amperages.push("30 Amp");
+  }
+
+  if (site.has50Amp) {
+    amperages.push("50 Amp");
+  }
+
+  if (amperages.length > 0) {
+    return amperages.join(", ");
+  }
+
+  return site.siteAmperageName || "-";
 }
 
 function sortSitesByCode(sites) {
@@ -115,9 +166,9 @@ export default function CampsitesPage() {
           site.siteCode,
           site.pricingOptionName,
           site.siteTypeName,
-          site.siteServiceTypeName,
-          site.siteAmperageName,
-          site.isPullThrough ? "pull through" : "",
+          formatServices(site),
+          formatAmperages(site),
+          site.isPullThrough ? "pull through accès direct" : "",
           site.isActive ? "actif" : "inactif",
           hasPolygon(site) ? "contour fait" : "contour à faire",
           `photos ${getPhotoCount(site)}`,
@@ -215,7 +266,7 @@ export default function CampsitesPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Rechercher par code, regroupement, type, service, ampérage..."
+              placeholder="Rechercher par code, regroupement, type, service, amp sur le site..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl border pl-10 pr-4 py-3"
@@ -244,13 +295,25 @@ export default function CampsitesPage() {
                       Regroupement
                     </th>
                     <th className="text-left px-4 py-3 font-semibold">Type</th>
-                    <th className="text-left px-4 py-3 font-semibold">Service</th>
-                    <th className="text-left px-4 py-3 font-semibold">Ampérage</th>
-                    <th className="text-left px-4 py-3 font-semibold">Largeur (pi)</th>
-                    <th className="text-left px-4 py-3 font-semibold">Longueur (pi)</th>
-                    <th className="text-left px-4 py-3 font-semibold">Accès direct</th>
+                    <th className="text-left px-4 py-3 font-semibold">
+                      Service
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold">
+                      Amp sur le site
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold">
+                      Largeur (pi)
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold">
+                      Longueur (pi)
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold">
+                      Accès direct
+                    </th>
                     <th className="text-left px-4 py-3 font-semibold">Actif</th>
-                    <th className="text-left px-4 py-3 font-semibold">Action</th>
+                    <th className="text-left px-4 py-3 font-semibold">
+                      Action
+                    </th>
                   </tr>
                 </thead>
 
@@ -272,11 +335,21 @@ export default function CampsitesPage() {
                       </td>
 
                       <td className="px-4 py-3">{site.siteTypeName || "-"}</td>
-                      <td className="px-4 py-3">{site.siteServiceTypeName || "-"}</td>
-                      <td className="px-4 py-3">{site.siteAmperageName || "-"}</td>
+
+                      <td className="px-4 py-3">
+                        {formatServices(site)}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {formatAmperages(site)}
+                      </td>
+
                       <td className="px-4 py-3">{site.widthFeet ?? "-"}</td>
                       <td className="px-4 py-3">{site.lengthFeet ?? "-"}</td>
-                      <td className="px-4 py-3">{site.isPullThrough ? "Oui" : "Non"}</td>
+
+                      <td className="px-4 py-3">
+                        {site.isPullThrough ? "Oui" : "Non"}
+                      </td>
 
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
@@ -328,7 +401,3 @@ export default function CampsitesPage() {
     </div>
   );
 }
-
-
-
-

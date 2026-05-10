@@ -1,10 +1,21 @@
 // ============================================================
-// Fichier : backend/src/main/java/com/gocamp/reservecamping/campsite/dto/CampsiteDetailsResponse.java
-// Dernière modification : 2026-04-20
+// Fichier : CampsiteDetailsResponse.java
+// Chemin  : backend/src/main/java/com/gocamp/reservecamping/campsite/dto
+// Dernière modification : 2026-05-09
+// Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - DTO détail d’un site
+// - Ajout services disponibles
+// - Ajout ampérages disponibles
+//
+// Historique des modifications :
+// 2026-04-20
 // - Ajout du champ pricingOptionId et pricingOptionName
+//
+// 2026-05-09
+// - Ajout hasWater / hasElectricity / hasSewer
+// - Ajout has15_20Amp / has30Amp / has50Amp
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.dto;
@@ -16,12 +27,24 @@ public record CampsiteDetailsResponse(
         Long id,
         Long campgroundId,
         String siteCode,
+
         Long siteTypeId,
         String siteTypeName,
+
         Long siteServiceTypeId,
         String siteServiceTypeName,
+
         Long siteAmperageId,
         String siteAmperageName,
+
+        Boolean hasWater,
+        Boolean hasElectricity,
+        Boolean hasSewer,
+
+        Boolean has15_20Amp,
+        Boolean has30Amp,
+        Boolean has50Amp,
+
         BigDecimal widthFeet,
         BigDecimal lengthFeet,
         BigDecimal maxEquipmentLengthFeet,
@@ -32,4 +55,5 @@ public record CampsiteDetailsResponse(
         List<Long> siteSurfaceTypeIds,
         Long pricingOptionId,
         String pricingOptionName
-) {}
+) {
+}

@@ -1,6 +1,6 @@
 // ============================================================
 // Fichier : frontend/src/App.jsx
-// Dernière modification : 2026-05-06
+// Dernière modification : 2026-05-09
 //
 // Résumé des modifications :
 // - Ajout promotions marketing
@@ -8,6 +8,7 @@
 // - Ajout calculateur de prix
 // - Correction du conflit de routes promotions
 // - Ajout route publique temporaire /reservation-test
+// - Ajout routes résultats recherche réservation
 //
 // Historique des modifications :
 // 2026-05-05
@@ -19,6 +20,12 @@
 // 2026-05-06
 // - Ajout import ReservationPage
 // - Ajout route publique temporaire /reservation-test
+//
+// 2026-05-09
+// - Ajout SearchCampgroundsResultsPage
+// - Ajout SearchCampsitesResultsPage
+// - Ajout routes /reservation-test/results/campgrounds
+// - Ajout routes /reservation-test/results/campsites
 // ============================================================
 
 import React from "react";
@@ -54,6 +61,8 @@ import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 import PriceCalculatorPage from "./pages/admin/PriceCalculatorPage";
 
 import ReservationPage from "./pages/reservation/ReservationPage";
+import SearchCampgroundsResultsPage from "./pages/reservation/SearchCampgroundsResultsPage";
+import SearchCampsitesResultsPage from "./pages/reservation/SearchCampsitesResultsPage";
 
 function ScrollToTop() {
   React.useEffect(() => {
@@ -88,6 +97,14 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthRoute />} />
 
       <Route path="/reservation-test" element={<ReservationPage />} />
+      <Route
+        path="/reservation-test/results/campgrounds"
+        element={<SearchCampgroundsResultsPage />}
+      />
+      <Route
+        path="/reservation-test/results/campsites"
+        element={<SearchCampsitesResultsPage />}
+      />
 
       <Route
         path="/account"

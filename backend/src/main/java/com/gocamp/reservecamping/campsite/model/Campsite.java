@@ -1,12 +1,23 @@
 // ============================================================
 // Fichier : Campsite.java
-// Chemin : backend/src/main/java/com/gocamp/reservecamping/campsite/model
-// Dernière modification : 2026-04-18
+// Chemin  : backend/src/main/java/com/gocamp/reservecamping/campsite/model
+// Dernière modification : 2026-05-09
+// Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Entité JPA des sites
+// - Ajout des services disponibles en booléens
+// - Ajout des ampérages disponibles en booléens
+// - Conservation temporaire de siteServiceType et siteAmperage
+//
+// Historique des modifications :
+// 2026-04-18
 // - Ajout du champ mapPolygonJson
 // - Ajout de labelX / labelY pour affichage sur la carte
+//
+// 2026-05-09
+// - Ajout hasWater / hasElectricity / hasSewer
+// - Ajout has15_20Amp / has30Amp / has50Amp
 // ============================================================
 
 package com.gocamp.reservecamping.campsite.model;
@@ -53,6 +64,24 @@ public class Campsite {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "site_amperage_id")
     private SiteAmperage siteAmperage;
+
+    @Column(name = "has_water", nullable = false)
+    private boolean hasWater = false;
+
+    @Column(name = "has_electricity", nullable = false)
+    private boolean hasElectricity = false;
+
+    @Column(name = "has_sewer", nullable = false)
+    private boolean hasSewer = false;
+
+    @Column(name = "has_15_20_amp", nullable = false)
+    private boolean has15_20Amp = false;
+
+    @Column(name = "has_30_amp", nullable = false)
+    private boolean has30Amp = false;
+
+    @Column(name = "has_50_amp", nullable = false)
+    private boolean has50Amp = false;
 
     @Column(name = "width_feet")
     private BigDecimal widthFeet;
@@ -140,6 +169,54 @@ public class Campsite {
 
     public void setSiteAmperage(SiteAmperage siteAmperage) {
         this.siteAmperage = siteAmperage;
+    }
+
+    public boolean isHasWater() {
+        return hasWater;
+    }
+
+    public void setHasWater(boolean hasWater) {
+        this.hasWater = hasWater;
+    }
+
+    public boolean isHasElectricity() {
+        return hasElectricity;
+    }
+
+    public void setHasElectricity(boolean hasElectricity) {
+        this.hasElectricity = hasElectricity;
+    }
+
+    public boolean isHasSewer() {
+        return hasSewer;
+    }
+
+    public void setHasSewer(boolean hasSewer) {
+        this.hasSewer = hasSewer;
+    }
+
+    public boolean isHas15_20Amp() {
+        return has15_20Amp;
+    }
+
+    public void setHas15_20Amp(boolean has15_20Amp) {
+        this.has15_20Amp = has15_20Amp;
+    }
+
+    public boolean isHas30Amp() {
+        return has30Amp;
+    }
+
+    public void setHas30Amp(boolean has30Amp) {
+        this.has30Amp = has30Amp;
+    }
+
+    public boolean isHas50Amp() {
+        return has50Amp;
+    }
+
+    public void setHas50Amp(boolean has50Amp) {
+        this.has50Amp = has50Amp;
     }
 
     public BigDecimal getWidthFeet() {

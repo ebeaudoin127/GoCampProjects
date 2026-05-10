@@ -9,7 +9,7 @@
 // - Affichage en tableau
 // - Sélection, ajout, modification et désactivation
 // - Ajout de libellés explicites, placeholders et textes d’aide
-//   dans le formulaire d’équipement
+// - Ajout des options de recherche par défaut
 //
 // Historique des modifications :
 // 2026-04-16
@@ -28,6 +28,8 @@
 // - Ajout de placeholders plus descriptifs
 // - Ajout de textes d’aide sous les champs importants
 // - Clarification des champs extension conducteur/passager
+// - Ajout defaultRequiresWater / defaultRequiresElectricity / defaultRequiresSewer
+// - Ajout defaultRequires15_20Amp / defaultRequires30Amp / defaultRequires50Amp
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -44,14 +46,17 @@ const emptyForm = {
   extensionConducteur: "",
   extensionPassager: "",
   actif: true,
+
+  defaultRequiresWater: false,
+  defaultRequiresElectricity: false,
+  defaultRequiresSewer: false,
+  defaultRequires15_20Amp: false,
+  defaultRequires30Amp: false,
+  defaultRequires50Amp: false,
 };
 
 function FieldHelp({ children }) {
-  return (
-    <p className="mt-1 text-xs text-gray-500">
-      {children}
-    </p>
-  );
+  return <p className="mt-1 text-xs text-gray-500">{children}</p>;
 }
 
 export default function EquipementsTab() {
@@ -105,6 +110,13 @@ export default function EquipementsTab() {
       extensionConducteur: equipement.extensionConducteur ?? "",
       extensionPassager: equipement.extensionPassager ?? "",
       actif: equipement.actif ?? true,
+
+      defaultRequiresWater: Boolean(equipement.defaultRequiresWater),
+      defaultRequiresElectricity: Boolean(equipement.defaultRequiresElectricity),
+      defaultRequiresSewer: Boolean(equipement.defaultRequiresSewer),
+      defaultRequires15_20Amp: Boolean(equipement.defaultRequires15_20Amp),
+      defaultRequires30Amp: Boolean(equipement.defaultRequires30Amp),
+      defaultRequires50Amp: Boolean(equipement.defaultRequires50Amp),
     });
   };
 
@@ -143,28 +155,37 @@ export default function EquipementsTab() {
     setMessage("");
   };
 
+  const buildPayload = (source) => ({
+    marque: source.marque || null,
+    modele: source.modele || null,
+    longueur: source.longueur !== "" ? Number(source.longueur) : null,
+    noSerie: source.noSerie || null,
+    noPlaque: source.noPlaque || null,
+    hasExtension: Boolean(source.hasExtension),
+    extensionConducteur:
+      source.hasExtension && source.extensionConducteur !== ""
+        ? Number(source.extensionConducteur)
+        : null,
+    extensionPassager:
+      source.hasExtension && source.extensionPassager !== ""
+        ? Number(source.extensionPassager)
+        : null,
+    actif: Boolean(source.actif),
+
+    defaultRequiresWater: Boolean(source.defaultRequiresWater),
+    defaultRequiresElectricity: Boolean(source.defaultRequiresElectricity),
+    defaultRequiresSewer: Boolean(source.defaultRequiresSewer),
+    defaultRequires15_20Amp: Boolean(source.defaultRequires15_20Amp),
+    defaultRequires30Amp: Boolean(source.defaultRequires30Amp),
+    defaultRequires50Amp: Boolean(source.defaultRequires50Amp),
+  });
+
   const handleSave = async () => {
     setMessage("");
 
-    const payload = {
-      marque: form.marque || null,
-      modele: form.modele || null,
-      longueur: form.longueur !== "" ? Number(form.longueur) : null,
-      noSerie: form.noSerie || null,
-      noPlaque: form.noPlaque || null,
-      hasExtension: Boolean(form.hasExtension),
-      extensionConducteur:
-        form.hasExtension && form.extensionConducteur !== ""
-          ? Number(form.extensionConducteur)
-          : null,
-      extensionPassager:
-        form.hasExtension && form.extensionPassager !== ""
-          ? Number(form.extensionPassager)
-          : null,
-      actif: Boolean(form.actif),
-    };
-
     try {
+      const payload = buildPayload(form);
+
       if (isEditing && selectedId) {
         await api.put(`/users/me/equipements/${selectedId}`, payload);
         setMessage("Équipement mis à jour.");
@@ -199,31 +220,13 @@ export default function EquipementsTab() {
     }
 
     try {
-      await api.put(`/users/me/equipements/${selectedEquipement.id}`, {
-        marque: selectedEquipement.marque || null,
-        modele: selectedEquipement.modele || null,
-        longueur:
-          selectedEquipement.longueur !== null &&
-          selectedEquipement.longueur !== undefined
-            ? Number(selectedEquipement.longueur)
-            : null,
-        noSerie: selectedEquipement.noSerie || null,
-        noPlaque: selectedEquipement.noPlaque || null,
-        hasExtension: Boolean(selectedEquipement.hasExtension),
-        extensionConducteur:
-          selectedEquipement.hasExtension &&
-          selectedEquipement.extensionConducteur !== null &&
-          selectedEquipement.extensionConducteur !== undefined
-            ? Number(selectedEquipement.extensionConducteur)
-            : null,
-        extensionPassager:
-          selectedEquipement.hasExtension &&
-          selectedEquipement.extensionPassager !== null &&
-          selectedEquipement.extensionPassager !== undefined
-            ? Number(selectedEquipement.extensionPassager)
-            : null,
-        actif: false,
-      });
+      await api.put(
+        `/users/me/equipements/${selectedEquipement.id}`,
+        buildPayload({
+          ...selectedEquipement,
+          actif: false,
+        })
+      );
 
       setMessage("Équipement désactivé.");
       await loadEquipements();
@@ -580,6 +583,100 @@ export default function EquipementsTab() {
             <FieldHelp>
               L’équipement actif est celui utilisé pour les recherches et validations de réservation.
             </FieldHelp>
+          </div>
+
+          <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h4 className="font-bold text-blue-900">
+              Options de recherche par défaut
+            </h4>
+
+            <p className="mt-1 text-sm text-blue-700">
+              Coche les services et ampérages que tu veux utiliser par défaut lors de la recherche de terrains avec cet équipement.
+            </p>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <h5 className="mb-2 text-sm font-semibold text-blue-900">
+                  Services souhaités
+                </h5>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={form.defaultRequiresWater}
+                      onChange={(e) =>
+                        updateField("defaultRequiresWater", e.target.checked)
+                      }
+                    />
+                    Eau
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={form.defaultRequiresElectricity}
+                      onChange={(e) =>
+                        updateField("defaultRequiresElectricity", e.target.checked)
+                      }
+                    />
+                    Électricité
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={form.defaultRequiresSewer}
+                      onChange={(e) =>
+                        updateField("defaultRequiresSewer", e.target.checked)
+                      }
+                    />
+                    Égout
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <h5 className="mb-2 text-sm font-semibold text-blue-900">
+                  Ampérage souhaité
+                </h5>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={form.defaultRequires15_20Amp}
+                      onChange={(e) =>
+                        updateField("defaultRequires15_20Amp", e.target.checked)
+                      }
+                    />
+                    15/20 Amp
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={form.defaultRequires30Amp}
+                      onChange={(e) =>
+                        updateField("defaultRequires30Amp", e.target.checked)
+                      }
+                    />
+                    30 Amp
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      checked={form.defaultRequires50Amp}
+                      onChange={(e) =>
+                        updateField("defaultRequires50Amp", e.target.checked)
+                      }
+                    />
+                    50 Amp
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">

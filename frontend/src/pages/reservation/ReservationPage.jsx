@@ -6,10 +6,10 @@
 //
 // Résumé :
 // - Page temporaire de test réservation/recherche
-// - Sélection des dates
-// - Recherche résumé des disponibilités
-// - Option pour utiliser ou non l’équipement actif
-// - Ajout d’un panneau "+ de filtres"
+// - Recherche selon équipement actif par défaut
+// - Cache les critères de base quand l’équipement actif est utilisé
+// - Résumé cliquable vers les pages de résultats complets
+// - Sauvegarde du résultat dans sessionStorage
 //
 // Historique des modifications :
 // 2026-05-06
@@ -17,13 +17,13 @@
 //
 // 2026-05-09
 // - Ajout recherche résumé /searchavailability/summary
-// - Ajout checkbox "Utiliser mon équipement actif"
-// - Affichage des totaux campings/terrains
-// - Affichage en liste compacte
-// - Ajout panneau de filtres avancés
+// - Ajout filtres de base manuels
+// - Ajout sessionStorage pour résultats
+// - Ajout navigation vers résultats campings et terrains
 // ============================================================
 
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import ReservationDateSelector from "../../components/reservation/ReservationDateSelector";
 import ReservationAvailabilityPanel from "../../components/reservation/ReservationAvailabilityPanel";
@@ -36,16 +36,18 @@ import {
   searchAvailabilitySummary,
 } from "../../services/reservationService";
 
+const STORAGE_KEY = "gocamp_search_summary";
+
 const emptyAdvancedFilters = {
-  requiresWater: false,
-  requiresElectricity: false,
-  requiresSewer: false,
   pullThroughOnly: false,
   surfaceTypes: [],
-  activities: [],
+  campgroundServiceCodes: [],
+  activityCodes: [],
 };
 
 export default function ReservationPage() {
+  const navigate = useNavigate();
+
   const userId = 11;
   const campsiteId = 1;
 
@@ -57,17 +59,50 @@ export default function ReservationPage() {
   const [departureDate, setDepartureDate] = useState("");
 
   const [useEquipmentContext, setUseEquipmentContext] = useState(true);
+
+  const [requiresWater, setRequiresWater] = useState(false);
+  const [requiresElectricity, setRequiresElectricity] = useState(false);
+  const [requiresSewer, setRequiresSewer] = useState(false);
+  const [requires15_20Amp, setRequires15_20Amp] = useState(false);
+  const [requires30Amp, setRequires30Amp] = useState(false);
+  const [requires50Amp, setRequires50Amp] = useState(false);
+
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState(emptyAdvancedFilters);
 
   const [availability, setAvailability] = useState(null);
   const [searchSummary, setSearchSummary] = useState(null);
   const [reservation, setReservation] = useState(null);
-
   const [hoveredSite, setHoveredSite] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function handleElectricityChange(checked) {
+    setRequiresElectricity(checked);
+
+    if (!checked) {
+      setRequires15_20Amp(false);
+      setRequires30Amp(false);
+      setRequires50Amp(false);
+    }
+  }
+
+  function saveSearchSummary(summary) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(summary));
+  }
+
+  function goToCampgroundsResults() {
+    if (!searchSummary) return;
+    saveSearchSummary(searchSummary);
+    navigate("/reservation-test/results/campgrounds");
+  }
+
+  function goToCampsitesResults() {
+    if (!searchSummary) return;
+    saveSearchSummary(searchSummary);
+    navigate("/reservation-test/results/campsites");
+  }
 
   async function handleCheckAvailability() {
     try {
@@ -96,6 +131,7 @@ export default function ReservationPage() {
       setAvailability(null);
       setReservation(null);
       setSearchSummary(null);
+      sessionStorage.removeItem(STORAGE_KEY);
 
       const result = await searchAvailabilitySummary({
         arrivalDate,
@@ -105,10 +141,19 @@ export default function ReservationPage() {
         radiusKm: defaultRadiusKm,
         userId,
         useEquipmentContext,
-        advancedFilters,
+        advancedFilters: {
+          requiresWater: useEquipmentContext ? false : requiresWater,
+          requiresElectricity: useEquipmentContext ? false : requiresElectricity,
+          requiresSewer: useEquipmentContext ? false : requiresSewer,
+          requires15_20Amp: useEquipmentContext ? false : requires15_20Amp,
+          requires30Amp: useEquipmentContext ? false : requires30Amp,
+          requires50Amp: useEquipmentContext ? false : requires50Amp,
+          ...advancedFilters,
+        },
       });
 
       setSearchSummary(result);
+      saveSearchSummary(result);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -137,18 +182,14 @@ export default function ReservationPage() {
   }
 
   const hasActiveAdvancedFilters =
-    advancedFilters.requiresWater ||
-    advancedFilters.requiresElectricity ||
-    advancedFilters.requiresSewer ||
     advancedFilters.pullThroughOnly ||
     advancedFilters.surfaceTypes.length > 0 ||
-    advancedFilters.activities.length > 0;
+    advancedFilters.campgroundServiceCodes.length > 0 ||
+    advancedFilters.activityCodes.length > 0;
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-2">
-        Réservation
-      </h1>
+      <h1 className="text-3xl font-bold mb-2">Réservation</h1>
 
       <p className="text-gray-600 mb-6">
         Recherche les terrains disponibles selon tes dates, ton équipement et tes préférences.
@@ -176,12 +217,103 @@ export default function ReservationPage() {
             </div>
 
             <div className="text-sm text-blue-700 mt-1">
-              GoCamp filtre automatiquement les terrains trop courts pour ton équipement.
-              Décoche cette option si tu veux explorer tous les terrains disponibles.
+              GoCamp utilise par défaut la longueur et les préférences de recherche de ton équipement actif.
+              Décoche cette option si tu veux choisir manuellement les critères de base.
             </div>
           </div>
         </label>
       </div>
+
+      {!useEquipmentContext && (
+        <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-2 text-xl font-bold">Critères de base</h2>
+
+          <p className="mb-4 text-sm text-gray-600">
+            Ces critères servent à trouver rapidement les terrains compatibles lorsque tu n’utilises pas ton équipement actif.
+          </p>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h3 className="mb-3 font-semibold text-gray-800">
+                Services requis sur le site
+              </h3>
+
+              <div className="space-y-2 text-sm">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={requiresWater}
+                    onChange={(e) => setRequiresWater(e.target.checked)}
+                  />
+                  Eau
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={requiresElectricity}
+                    onChange={(e) => handleElectricityChange(e.target.checked)}
+                  />
+                  Électricité
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={requiresSewer}
+                    onChange={(e) => setRequiresSewer(e.target.checked)}
+                  />
+                  Égout
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-3 font-semibold text-gray-800">
+                Ampérage requis
+              </h3>
+
+              {!requiresElectricity && (
+                <p className="mb-2 text-xs text-gray-500">
+                  Coche d’abord Électricité pour choisir un ampérage.
+                </p>
+              )}
+
+              <div className="space-y-2 text-sm">
+                <label className={`flex items-center gap-2 ${!requiresElectricity ? "text-gray-400" : ""}`}>
+                  <input
+                    type="checkbox"
+                    disabled={!requiresElectricity}
+                    checked={requires15_20Amp}
+                    onChange={(e) => setRequires15_20Amp(e.target.checked)}
+                  />
+                  15/20 Amp
+                </label>
+
+                <label className={`flex items-center gap-2 ${!requiresElectricity ? "text-gray-400" : ""}`}>
+                  <input
+                    type="checkbox"
+                    disabled={!requiresElectricity}
+                    checked={requires30Amp}
+                    onChange={(e) => setRequires30Amp(e.target.checked)}
+                  />
+                  30 Amp
+                </label>
+
+                <label className={`flex items-center gap-2 ${!requiresElectricity ? "text-gray-400" : ""}`}>
+                  <input
+                    type="checkbox"
+                    disabled={!requiresElectricity}
+                    checked={requires50Amp}
+                    onChange={(e) => setRequires50Amp(e.target.checked)}
+                  />
+                  50 Amp
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5">
         <button
@@ -247,35 +379,47 @@ export default function ReservationPage() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+              <button
+                type="button"
+                onClick={goToCampgroundsResults}
+                className="rounded-xl border border-green-200 bg-green-50 p-5 text-left hover:bg-green-100 transition"
+              >
                 <div className="text-sm text-green-700">
                   Campings avec au moins un terrain disponible
                 </div>
                 <div className="text-3xl font-bold text-green-800">
                   {searchSummary.totalCampgrounds}
                 </div>
-              </div>
+                <div className="mt-2 text-xs font-semibold text-green-700">
+                  Cliquer pour voir la liste complète
+                </div>
+              </button>
 
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+              <button
+                type="button"
+                onClick={goToCampsitesResults}
+                className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-left hover:bg-blue-100 transition"
+              >
                 <div className="text-sm text-blue-700">
                   Terrains disponibles au total
                 </div>
                 <div className="text-3xl font-bold text-blue-800">
                   {searchSummary.totalCampsites}
                 </div>
-              </div>
+                <div className="mt-2 text-xs font-semibold text-blue-700">
+                  Cliquer pour voir tous les terrains
+                </div>
+              </button>
             </div>
 
             <div className="mt-4 text-sm text-gray-600">
-              GoCamp affiche un aperçu rapide des terrains disponibles. Tu pourras ensuite ouvrir un camping pour voir tous ses terrains.
+              GoCamp affiche un aperçu rapide des terrains disponibles. Tu peux cliquer sur les totaux pour ouvrir les résultats complets.
             </div>
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div className="border-b bg-gray-50 px-5 py-4">
-              <h3 className="text-xl font-bold">
-                Résultats disponibles
-              </h3>
+              <h3 className="text-xl font-bold">Résultats disponibles</h3>
             </div>
 
             <div className="divide-y">

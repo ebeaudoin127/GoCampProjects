@@ -7,8 +7,10 @@
 // Résumé :
 // - DTO de requête pour rechercher des terrains disponibles
 // - Supporte dates, GPS, rayon, campground précis, équipement
-// - Supporte les filtres avancés : services, accès direct,
-//   surfaces et activités futures
+// - Supporte les filtres de base : eau, électricité, égout,
+//   ampérages requis
+// - Supporte les filtres avancés : accès direct, surfaces,
+//   services camping et activités
 //
 // Historique des modifications :
 // 2026-05-07
@@ -17,8 +19,8 @@
 // 2026-05-09
 // - Ajout userId
 // - Ajout useEquipmentContext activé par défaut
-// - Ajout equipmentLengthFeet optionnel
 // - Ajout filtres avancés
+// - Ajout requires15_20Amp / requires30Amp / requires50Amp
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.dto;
@@ -46,10 +48,16 @@ public class AvailableCampsiteSearchRequest {
     private Boolean requiresWater = false;
     private Boolean requiresElectricity = false;
     private Boolean requiresSewer = false;
+
+    private Boolean requires15_20Amp = false;
+    private Boolean requires30Amp = false;
+    private Boolean requires50Amp = false;
+
     private Boolean pullThroughOnly = false;
 
     private List<String> surfaceTypes = new ArrayList<>();
-    private List<String> activities = new ArrayList<>();
+    private List<String> campgroundServiceCodes = new ArrayList<>();
+    private List<String> activityCodes = new ArrayList<>();
 
     private boolean favoritesOnly = false;
 
@@ -152,6 +160,30 @@ public class AvailableCampsiteSearchRequest {
         this.requiresSewer = requiresSewer;
     }
 
+    public Boolean getRequires15_20Amp() {
+        return requires15_20Amp;
+    }
+
+    public void setRequires15_20Amp(Boolean requires15_20Amp) {
+        this.requires15_20Amp = requires15_20Amp;
+    }
+
+    public Boolean getRequires30Amp() {
+        return requires30Amp;
+    }
+
+    public void setRequires30Amp(Boolean requires30Amp) {
+        this.requires30Amp = requires30Amp;
+    }
+
+    public Boolean getRequires50Amp() {
+        return requires50Amp;
+    }
+
+    public void setRequires50Amp(Boolean requires50Amp) {
+        this.requires50Amp = requires50Amp;
+    }
+
     public Boolean getPullThroughOnly() {
         return pullThroughOnly;
     }
@@ -168,12 +200,20 @@ public class AvailableCampsiteSearchRequest {
         this.surfaceTypes = surfaceTypes;
     }
 
-    public List<String> getActivities() {
-        return activities;
+    public List<String> getCampgroundServiceCodes() {
+        return campgroundServiceCodes;
     }
 
-    public void setActivities(List<String> activities) {
-        this.activities = activities;
+    public void setCampgroundServiceCodes(List<String> campgroundServiceCodes) {
+        this.campgroundServiceCodes = campgroundServiceCodes;
+    }
+
+    public List<String> getActivityCodes() {
+        return activityCodes;
+    }
+
+    public void setActivityCodes(List<String> activityCodes) {
+        this.activityCodes = activityCodes;
     }
 
     public boolean isFavoritesOnly() {
