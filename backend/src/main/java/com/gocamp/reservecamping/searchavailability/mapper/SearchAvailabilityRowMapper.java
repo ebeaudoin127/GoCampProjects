@@ -1,12 +1,15 @@
 // ============================================================
 // Fichier : SearchAvailabilityRowMapper.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/mapper
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-10
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Convertit les résultats SQL natifs Object[] en projections
 // - Évite de mapper les colonnes directement dans le repository
+// - Ajout services directs du site
+// - Ajout ampérages disponibles sur le site
+// - Ajout services/activités du camping
 //
 // Historique des modifications :
 // 2026-05-08
@@ -17,6 +20,12 @@
 // - Ajout pullThrough
 // - Ajout service type
 // - Ajout surfaceValues
+//
+// 2026-05-10
+// - Ajout hasWater / hasElectricity / hasSewer
+// - Ajout has15_20Amp / has30Amp / has50Amp
+// - Ajout campgroundServiceCodes
+// - Ajout activityCodes
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.mapper;
@@ -124,19 +133,7 @@ public class SearchAvailabilityRowMapper {
 
             @Override
             public Boolean getPullThrough() {
-                if (row[11] == null) {
-                    return false;
-                }
-
-                if (row[11] instanceof Boolean value) {
-                    return value;
-                }
-
-                if (row[11] instanceof Number value) {
-                    return value.intValue() == 1;
-                }
-
-                return Boolean.parseBoolean(row[11].toString());
+                return toBoolean(row[11]);
             }
 
             @Override
@@ -153,6 +150,62 @@ public class SearchAvailabilityRowMapper {
             public String getSurfaceValues() {
                 return (String) row[14];
             }
+
+            @Override
+            public Boolean getHasWater() {
+                return toBoolean(row[15]);
+            }
+
+            @Override
+            public Boolean getHasElectricity() {
+                return toBoolean(row[16]);
+            }
+
+            @Override
+            public Boolean getHasSewer() {
+                return toBoolean(row[17]);
+            }
+
+            @Override
+            public Boolean getHas15_20Amp() {
+                return toBoolean(row[18]);
+            }
+
+            @Override
+            public Boolean getHas30Amp() {
+                return toBoolean(row[19]);
+            }
+
+            @Override
+            public Boolean getHas50Amp() {
+                return toBoolean(row[20]);
+            }
+
+            @Override
+            public String getCampgroundServiceCodes() {
+                return (String) row[21];
+            }
+
+            @Override
+            public String getActivityCodes() {
+                return (String) row[22];
+            }
         };
+    }
+
+    private Boolean toBoolean(Object value) {
+        if (value == null) {
+            return false;
+        }
+
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+
+        if (value instanceof Number numberValue) {
+            return numberValue.intValue() == 1;
+        }
+
+        return Boolean.parseBoolean(value.toString());
     }
 }

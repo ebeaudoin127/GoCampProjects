@@ -1,21 +1,15 @@
 // ============================================================
 // Fichier : SearchAvailabilitySqlSelector.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/selector
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-10
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Centralise les requêtes SQL natives du moteur de recherche
-// - Ajout des données nécessaires aux filtres avancés
-//
-// Historique des modifications :
-// 2026-05-08
-// - Création initiale du selector SQL
-//
-// 2026-05-09
-// - Ajout filtre equipmentLengthFeet
-// - Ajout photos
-// - Ajout service type, pull-through et surfaces
+// - Conserve les méthodes attendues par SearchAvailabilityRepositoryImpl
+// - Ajout des services directs du site
+// - Ajout des ampérages disponibles sur le site
+// - Ajout services/activités du camping
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.selector;
@@ -115,7 +109,31 @@ public class SearchAvailabilitySqlSelector {
                         INNER JOIN site_surface_type st
                             ON st.id = cst.site_surface_type_id
                         WHERE cst.campsite_id = cs.id
-                    ) AS surface_values
+                    ) AS surface_values,
+
+                    cs.has_water,
+                    cs.has_electricity,
+                    cs.has_sewer,
+
+                    cs.has_15_20_amp,
+                    cs.has_30_amp,
+                    cs.has_50_amp,
+
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT srv.code SEPARATOR ',')
+                        FROM campground_service csrv
+                        INNER JOIN service srv
+                            ON srv.id = csrv.service_id
+                        WHERE csrv.campground_id = cg.id
+                    ) AS campground_service_codes,
+
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT act.code SEPARATOR ',')
+                        FROM campground_activity ca
+                        INNER JOIN activity act
+                            ON act.id = ca.activity_id
+                        WHERE ca.campground_id = cg.id
+                    ) AS activity_codes
 
                 FROM campground cg
                 INNER JOIN campsite cs

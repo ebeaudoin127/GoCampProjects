@@ -1,12 +1,14 @@
 // ============================================================
 // Fichier : AvailableCampsiteSearchRowProjection.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/repository
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-10
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Projection interne représentant une ligne de résultat
 // - Combine campground + campsite + distance + photos + filtres
+// - Ajout des services directs du site
+// - Ajout des ampérages disponibles sur le site
 //
 // Historique des modifications :
 // 2026-05-08
@@ -17,6 +19,12 @@
 // - Ajout pullThrough
 // - Ajout serviceTypeCode / serviceTypeNameFr
 // - Ajout surfaceValues
+//
+// 2026-05-10
+// - Ajout hasWater / hasElectricity / hasSewer
+// - Ajout has15_20Amp / has30Amp / has50Amp
+// - Ajout campgroundServiceCodes
+// - Ajout activityCodes
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.repository;
@@ -54,4 +62,20 @@ public interface AvailableCampsiteSearchRowProjection {
     String getServiceTypeNameFr();
 
     String getSurfaceValues();
+
+    Boolean getHasWater();
+
+    Boolean getHasElectricity();
+
+    Boolean getHasSewer();
+
+    Boolean getHas15_20Amp();
+
+    Boolean getHas30Amp();
+
+    Boolean getHas50Amp();
+
+    String getCampgroundServiceCodes();
+
+    String getActivityCodes();
 }

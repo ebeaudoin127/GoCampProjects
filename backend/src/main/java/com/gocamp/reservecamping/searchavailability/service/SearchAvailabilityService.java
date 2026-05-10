@@ -1,7 +1,7 @@
 // ============================================================
 // Fichier : SearchAvailabilityService.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/service
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-10
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
@@ -11,21 +11,9 @@
 // - Garde l’aperçu à 5 terrains par camping
 // - Ajoute la liste complète des terrains disponibles
 // - Utilise l’équipement actif du user comme contexte par défaut
-// - Applique les filtres avancés : services, accès direct, surfaces
-//
-// Historique des modifications :
-// 2026-05-07
-// - Création initiale
-//
-// 2026-05-08
-// - Ajout buildSearchSummary()
-// - Ajout groupement par campground
-//
-// 2026-05-09
-// - Ajout contexte équipement
-// - Ajout photos
-// - Ajout filtres avancés
-// - Ajout allCampsites pour affichage complet paginé côté frontend
+// - Applique les filtres : eau, égout, ampérages,
+//   accès direct, surfaces, services camping, activités
+// - Corrige la logique ampérage : 30 + 50 = 30 OU 50
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.service;
@@ -46,10 +34,14 @@ import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class SearchAvailabilityService {
@@ -111,15 +103,13 @@ public class SearchAvailabilityService {
         int previewRowsUsed = 0;
 
         for (AvailableCampsiteSearchRowProjection row : rows) {
-            if (!matchesAdvancedFilters(row, request)) {
+            if (!matchesFilters(row, request)) {
                 continue;
             }
 
             totalCampsites++;
 
-            allCampsites.add(
-                    createCampsiteResult(row)
-            );
+            allCampsites.add(createCampsiteResult(row));
 
             SearchCampgroundSummaryDto campgroundDto =
                     grouped.computeIfAbsent(
@@ -156,9 +146,7 @@ public class SearchAvailabilityService {
         response.setPreviewCampsitesPerCampground(
                 PREVIEW_CAMPSITES_PER_CAMPGROUND
         );
-        response.setCampgrounds(
-                grouped.values().stream().toList()
-        );
+        response.setCampgrounds(grouped.values().stream().toList());
         response.setAllCampsites(allCampsites);
 
         return response;
@@ -191,13 +179,6 @@ public class SearchAvailabilityService {
                 Boolean.TRUE.equals(activeEquipment.getDefaultRequiresSewer())
         );
 
-        request.setRequiresElectricity(
-                Boolean.TRUE.equals(activeEquipment.getDefaultRequiresElectricity())
-                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires15_20Amp())
-                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires30Amp())
-                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires50Amp())
-        );
-
         request.setRequires15_20Amp(
                 Boolean.TRUE.equals(activeEquipment.getDefaultRequires15_20Amp())
         );
@@ -209,47 +190,68 @@ public class SearchAvailabilityService {
         request.setRequires50Amp(
                 Boolean.TRUE.equals(activeEquipment.getDefaultRequires50Amp())
         );
+
+        request.setRequiresElectricity(
+                Boolean.TRUE.equals(activeEquipment.getDefaultRequiresElectricity())
+                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires15_20Amp())
+                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires30Amp())
+                        || Boolean.TRUE.equals(activeEquipment.getDefaultRequires50Amp())
+        );
     }
 
-    private boolean matchesAdvancedFilters(
+    private boolean matchesFilters(
             AvailableCampsiteSearchRowProjection row,
             AvailableCampsiteSearchRequest request
     ) {
         if (
-                Boolean.TRUE.equals(request.getPullThroughOnly())
-                        && !Boolean.TRUE.equals(row.getPullThrough())
-        ) {
-            return false;
-        }
-
-        String serviceText = normalize(
-                safe(row.getServiceTypeCode()) + " " +
-                        safe(row.getServiceTypeNameFr())
-        );
-
-        if (
                 Boolean.TRUE.equals(request.getRequiresWater())
-                        && !containsAny(serviceText, "eau", "water")
+                        && !Boolean.TRUE.equals(row.getHasWater())
         ) {
             return false;
         }
 
         if (
                 Boolean.TRUE.equals(request.getRequiresSewer())
-                        && !containsAny(serviceText, "egout", "sewer")
+                        && !Boolean.TRUE.equals(row.getHasSewer())
         ) {
             return false;
         }
 
-        if (Boolean.TRUE.equals(request.getRequiresElectricity())) {
-            boolean hasMatchingAmp =
-                    Boolean.TRUE.equals(request.getRequires15_20Amp())
-                            || Boolean.TRUE.equals(request.getRequires30Amp())
-                            || Boolean.TRUE.equals(request.getRequires50Amp());
+        boolean ampRequested =
+                Boolean.TRUE.equals(request.getRequires15_20Amp())
+                        || Boolean.TRUE.equals(request.getRequires30Amp())
+                        || Boolean.TRUE.equals(request.getRequires50Amp());
 
-            if (!hasMatchingAmp) {
+        if (ampRequested) {
+            boolean ampMatches =
+                    (
+                            Boolean.TRUE.equals(request.getRequires15_20Amp())
+                                    && Boolean.TRUE.equals(row.getHas15_20Amp())
+                    )
+                            || (
+                            Boolean.TRUE.equals(request.getRequires30Amp())
+                                    && Boolean.TRUE.equals(row.getHas30Amp())
+                    )
+                            || (
+                            Boolean.TRUE.equals(request.getRequires50Amp())
+                                    && Boolean.TRUE.equals(row.getHas50Amp())
+                    );
+
+            if (!ampMatches) {
                 return false;
             }
+        } else if (
+                Boolean.TRUE.equals(request.getRequiresElectricity())
+                        && !Boolean.TRUE.equals(row.getHasElectricity())
+        ) {
+            return false;
+        }
+
+        if (
+                Boolean.TRUE.equals(request.getPullThroughOnly())
+                        && !Boolean.TRUE.equals(row.getPullThrough())
+        ) {
+            return false;
         }
 
         if (
@@ -264,6 +266,40 @@ public class SearchAvailabilityService {
                     .anyMatch(surfaceText::contains);
 
             if (!hasMatchingSurface) {
+                return false;
+            }
+        }
+
+        if (
+                request.getCampgroundServiceCodes() != null
+                        && !request.getCampgroundServiceCodes().isEmpty()
+        ) {
+            Set<String> campgroundServiceCodes =
+                    splitCodes(row.getCampgroundServiceCodes());
+
+            boolean hasMatchingService =
+                    request.getCampgroundServiceCodes()
+                            .stream()
+                            .anyMatch(campgroundServiceCodes::contains);
+
+            if (!hasMatchingService) {
+                return false;
+            }
+        }
+
+        if (
+                request.getActivityCodes() != null
+                        && !request.getActivityCodes().isEmpty()
+        ) {
+            Set<String> activityCodes =
+                    splitCodes(row.getActivityCodes());
+
+            boolean hasMatchingActivity =
+                    request.getActivityCodes()
+                            .stream()
+                            .anyMatch(activityCodes::contains);
+
+            if (!hasMatchingActivity) {
                 return false;
             }
         }
@@ -389,7 +425,6 @@ public class SearchAvailabilityService {
         dto.setMaxEquipmentLengthFeet(
                 row.getMaxEquipmentLengthFeet()
         );
-
         dto.setPhotoUrls(buildPhotoUrls(row));
 
         return dto;
@@ -435,21 +470,15 @@ public class SearchAvailabilityService {
         }
     }
 
-    private boolean containsAny(
-            String source,
-            String... values
-    ) {
-        for (String value : values) {
-            if (source.contains(normalize(value))) {
-                return true;
-            }
+    private Set<String> splitCodes(String value) {
+        if (value == null || value.isBlank()) {
+            return Collections.emptySet();
         }
 
-        return false;
-    }
-
-    private String safe(String value) {
-        return value == null ? "" : value;
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .collect(Collectors.toSet());
     }
 
     private String normalize(String value) {
