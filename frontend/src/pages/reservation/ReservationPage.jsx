@@ -1,15 +1,20 @@
 // ============================================================
 // Fichier : ReservationPage.jsx
 // Chemin  : frontend/src/pages/reservation
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-12
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Page temporaire de test réservation/recherche
 // - Recherche selon équipement actif par défaut
 // - Cache les critères de base quand l’équipement actif est utilisé
+// - Affiche les critères manuels quand l’équipement actif est désactivé
+// - Ajoute longueur équipement et extensions conducteur/passager
 // - Résumé cliquable vers les pages de résultats complets
 // - Sauvegarde du résultat dans sessionStorage
+// - Affiche le nombre de terrains supplémentaires disponibles
+//   sous l’aperçu de chaque camping
+// - Corrige le positionnement du popup photo dans la liste des terrains
 //
 // Historique des modifications :
 // 2026-05-06
@@ -20,6 +25,13 @@
 // - Ajout filtres de base manuels
 // - Ajout sessionStorage pour résultats
 // - Ajout navigation vers résultats campings et terrains
+//
+// 2026-05-12
+// - Ajout champ longueur de l’équipement en recherche manuelle
+// - Ajout extensions côté conducteur/passager en recherche manuelle
+// - Envoi de equipmentLengthFeet au backend
+// - Ajout compteur de terrains supplémentaires sous chaque aperçu
+// - Correction popup photos : overflow visible + positionnement top/right
 // ============================================================
 
 import React, { useState } from "react";
@@ -59,6 +71,14 @@ export default function ReservationPage() {
   const [departureDate, setDepartureDate] = useState("");
 
   const [useEquipmentContext, setUseEquipmentContext] = useState(true);
+
+  const [equipmentLengthFeet, setEquipmentLengthFeet] = useState("");
+  const [hasDriverSideSlideOut, setHasDriverSideSlideOut] = useState(false);
+  const [driverSideSlideOutCount, setDriverSideSlideOutCount] = useState("");
+  const [hasPassengerSideSlideOut, setHasPassengerSideSlideOut] =
+    useState(false);
+  const [passengerSideSlideOutCount, setPassengerSideSlideOutCount] =
+    useState("");
 
   const [requiresWater, setRequiresWater] = useState(false);
   const [requiresElectricity, setRequiresElectricity] = useState(false);
@@ -142,6 +162,21 @@ export default function ReservationPage() {
         userId,
         useEquipmentContext,
         advancedFilters: {
+          equipmentLengthFeet:
+            useEquipmentContext || equipmentLengthFeet === ""
+              ? null
+              : Number(equipmentLengthFeet),
+
+          driverSideSlideOutCount:
+            useEquipmentContext || !hasDriverSideSlideOut
+              ? 0
+              : Number(driverSideSlideOutCount || 0),
+
+          passengerSideSlideOutCount:
+            useEquipmentContext || !hasPassengerSideSlideOut
+              ? 0
+              : Number(passengerSideSlideOutCount || 0),
+
           requiresWater: useEquipmentContext ? false : requiresWater,
           requiresElectricity: useEquipmentContext ? false : requiresElectricity,
           requiresSewer: useEquipmentContext ? false : requiresSewer,
@@ -192,7 +227,8 @@ export default function ReservationPage() {
       <h1 className="text-3xl font-bold mb-2">Réservation</h1>
 
       <p className="text-gray-600 mb-6">
-        Recherche les terrains disponibles selon tes dates, ton équipement et tes préférences.
+        Recherche les terrains disponibles selon tes dates, ton équipement et
+        tes préférences.
       </p>
 
       <ReservationDateSelector
@@ -217,8 +253,9 @@ export default function ReservationPage() {
             </div>
 
             <div className="text-sm text-blue-700 mt-1">
-              GoCamp utilise par défaut la longueur et les préférences de recherche de ton équipement actif.
-              Décoche cette option si tu veux choisir manuellement les critères de base.
+              GoCamp utilise par défaut la longueur et les préférences de
+              recherche de ton équipement actif. Décoche cette option si tu veux
+              choisir manuellement les critères de base.
             </div>
           </div>
         </label>
@@ -229,8 +266,99 @@ export default function ReservationPage() {
           <h2 className="mb-2 text-xl font-bold">Critères de base</h2>
 
           <p className="mb-4 text-sm text-gray-600">
-            Ces critères servent à trouver rapidement les terrains compatibles lorsque tu n’utilises pas ton équipement actif.
+            Ces critères servent à trouver rapidement les terrains compatibles
+            lorsque tu n’utilises pas ton équipement actif.
           </p>
+
+          <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <h3 className="mb-3 font-semibold text-gray-800">
+              Équipement à valider
+            </h3>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Longueur de l’équipement
+                </label>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={equipmentLengthFeet}
+                  onChange={(e) => setEquipmentLengthFeet(e.target.value)}
+                  placeholder="Ex. 37"
+                  className="w-full rounded-lg border px-3 py-2"
+                />
+
+                <p className="mt-1 text-xs text-gray-500">
+                  Longueur totale en pieds.
+                </p>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={hasDriverSideSlideOut}
+                    onChange={(e) => {
+                      setHasDriverSideSlideOut(e.target.checked);
+
+                      if (!e.target.checked) {
+                        setDriverSideSlideOutCount("");
+                      }
+                    }}
+                  />
+                  Extension côté conducteur
+                </label>
+
+                {hasDriverSideSlideOut && (
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={driverSideSlideOutCount}
+                    onChange={(e) =>
+                      setDriverSideSlideOutCount(e.target.value)
+                    }
+                    placeholder="Nombre"
+                    className="mt-2 w-full rounded-lg border px-3 py-2"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={hasPassengerSideSlideOut}
+                    onChange={(e) => {
+                      setHasPassengerSideSlideOut(e.target.checked);
+
+                      if (!e.target.checked) {
+                        setPassengerSideSlideOutCount("");
+                      }
+                    }}
+                  />
+                  Extension côté passager
+                </label>
+
+                {hasPassengerSideSlideOut && (
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={passengerSideSlideOutCount}
+                    onChange={(e) =>
+                      setPassengerSideSlideOutCount(e.target.value)
+                    }
+                    placeholder="Nombre"
+                    className="mt-2 w-full rounded-lg border px-3 py-2"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
@@ -280,7 +408,11 @@ export default function ReservationPage() {
               )}
 
               <div className="space-y-2 text-sm">
-                <label className={`flex items-center gap-2 ${!requiresElectricity ? "text-gray-400" : ""}`}>
+                <label
+                  className={`flex items-center gap-2 ${
+                    !requiresElectricity ? "text-gray-400" : ""
+                  }`}
+                >
                   <input
                     type="checkbox"
                     disabled={!requiresElectricity}
@@ -290,7 +422,11 @@ export default function ReservationPage() {
                   15/20 Amp
                 </label>
 
-                <label className={`flex items-center gap-2 ${!requiresElectricity ? "text-gray-400" : ""}`}>
+                <label
+                  className={`flex items-center gap-2 ${
+                    !requiresElectricity ? "text-gray-400" : ""
+                  }`}
+                >
                   <input
                     type="checkbox"
                     disabled={!requiresElectricity}
@@ -300,7 +436,11 @@ export default function ReservationPage() {
                   30 Amp
                 </label>
 
-                <label className={`flex items-center gap-2 ${!requiresElectricity ? "text-gray-400" : ""}`}>
+                <label
+                  className={`flex items-center gap-2 ${
+                    !requiresElectricity ? "text-gray-400" : ""
+                  }`}
+                >
                   <input
                     type="checkbox"
                     disabled={!requiresElectricity}
@@ -374,9 +514,7 @@ export default function ReservationPage() {
       {searchSummary && (
         <div className="mt-8 space-y-6">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-2xl font-bold mb-4">
-              Résumé de recherche
-            </h2>
+            <h2 className="text-2xl font-bold mb-4">Résumé de recherche</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
@@ -387,9 +525,11 @@ export default function ReservationPage() {
                 <div className="text-sm text-green-700">
                   Campings avec au moins un terrain disponible
                 </div>
+
                 <div className="text-3xl font-bold text-green-800">
                   {searchSummary.totalCampgrounds}
                 </div>
+
                 <div className="mt-2 text-xs font-semibold text-green-700">
                   Cliquer pour voir la liste complète
                 </div>
@@ -403,9 +543,11 @@ export default function ReservationPage() {
                 <div className="text-sm text-blue-700">
                   Terrains disponibles au total
                 </div>
+
                 <div className="text-3xl font-bold text-blue-800">
                   {searchSummary.totalCampsites}
                 </div>
+
                 <div className="mt-2 text-xs font-semibold text-blue-700">
                   Cliquer pour voir tous les terrains
                 </div>
@@ -413,115 +555,133 @@ export default function ReservationPage() {
             </div>
 
             <div className="mt-4 text-sm text-gray-600">
-              GoCamp affiche un aperçu rapide des terrains disponibles. Tu peux cliquer sur les totaux pour ouvrir les résultats complets.
+              GoCamp affiche un aperçu rapide des terrains disponibles. Tu peux
+              cliquer sur les totaux pour ouvrir les résultats complets.
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-visible">
             <div className="border-b bg-gray-50 px-5 py-4">
               <h3 className="text-xl font-bold">Résultats disponibles</h3>
             </div>
 
             <div className="divide-y">
-              {searchSummary.campgrounds?.map((campground) => (
-                <div key={campground.campgroundId} className="p-5">
-                  <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
-                      <h4 className="text-lg font-bold">
-                        {campground.campgroundName}
-                      </h4>
+              {searchSummary.campgrounds?.map((campground) => {
+                const previewCount = campground.previewCampsites?.length || 0;
+                const extraCount =
+                  campground.availableCampsiteCount - previewCount;
 
-                      <p className="text-sm text-gray-600">
-                        {campground.distanceKm?.toFixed(1)} km •{" "}
-                        {campground.availableCampsiteCount} terrain(s) disponible(s)
-                      </p>
+                return (
+                  <div key={campground.campgroundId} className="p-5">
+                    <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <div>
+                        <h4 className="text-lg font-bold">
+                          {campground.campgroundName}
+                        </h4>
+
+                        <p className="text-sm text-gray-600">
+                          {campground.distanceKm?.toFixed(1)} km •{" "}
+                          {campground.availableCampsiteCount} terrain(s)
+                          disponible(s)
+                        </p>
+                      </div>
+
+                      <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50">
+                        Voir tous les terrains
+                      </button>
                     </div>
 
-                    <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50">
-                      Voir tous les terrains
-                    </button>
-                  </div>
-
-                  <div className="rounded-lg border border-gray-200 overflow-hidden">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-gray-100 text-gray-700">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Terrain</th>
-                          <th className="px-4 py-3 text-left">Longueur max</th>
-                          <th className="px-4 py-3 text-left">Photos</th>
-                          <th className="px-4 py-3 text-right">Action</th>
-                        </tr>
-                      </thead>
-
-                      <tbody className="divide-y bg-white">
-                        {campground.previewCampsites?.map((site) => (
-                          <tr
-                            key={site.campsiteId}
-                            className="hover:bg-orange-50"
-                            onMouseEnter={() => setHoveredSite(site)}
-                            onMouseLeave={() => setHoveredSite(null)}
-                          >
-                            <td className="px-4 py-3 font-semibold">
-                              Terrain {site.siteCode}
-                            </td>
-
-                            <td className="px-4 py-3">
-                              {site.maxEquipmentLengthFeet
-                                ? `${site.maxEquipmentLengthFeet} pi`
-                                : "Non spécifié"}
-                            </td>
-
-                            <td className="px-4 py-3 relative">
-                              <span className="text-blue-600 underline cursor-help">
-                                Voir photos
-                              </span>
-
-                              {hoveredSite?.campsiteId === site.campsiteId && (
-                                <div className="absolute z-20 mt-2 w-72 rounded-xl border bg-white p-3 shadow-xl">
-                                  <div className="text-sm font-semibold mb-2">
-                                    Photos du terrain {site.siteCode}
-                                  </div>
-
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {site.photoUrls?.length > 0 ? (
-                                      site.photoUrls.map((url) => (
-                                        <img
-                                          key={url}
-                                          src={url}
-                                          alt={`Terrain ${site.siteCode}`}
-                                          className="h-20 w-full rounded object-cover"
-                                        />
-                                      ))
-                                    ) : (
-                                      <>
-                                        <div className="h-20 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
-                                          Aucune
-                                        </div>
-                                        <div className="h-20 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
-                                          photo
-                                        </div>
-                                        <div className="h-20 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
-                                          disponible
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </td>
-
-                            <td className="px-4 py-3 text-right">
-                              <button className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-semibold hover:bg-green-700">
-                                Choisir
-                              </button>
-                            </td>
+                    <div className="rounded-lg border border-gray-200 overflow-visible">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-gray-100 text-gray-700">
+                          <tr>
+                            <th className="px-4 py-3 text-left">Terrain</th>
+                            <th className="px-4 py-3 text-left">
+                              Longueur max
+                            </th>
+                            <th className="px-4 py-3 text-left">Photos</th>
+                            <th className="px-4 py-3 text-right">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+
+                        <tbody className="divide-y bg-white">
+                          {campground.previewCampsites?.map((site) => (
+                            <tr
+                              key={site.campsiteId}
+                              className="hover:bg-orange-50"
+                              onMouseEnter={() => setHoveredSite(site)}
+                              onMouseLeave={() => setHoveredSite(null)}
+                            >
+                              <td className="px-4 py-3 font-semibold">
+                                Terrain {site.siteCode}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                {site.maxEquipmentLengthFeet
+                                  ? `${site.maxEquipmentLengthFeet} pi`
+                                  : "Non spécifié"}
+                              </td>
+
+                              <td className="px-4 py-3 relative">
+                                <span className="text-blue-600 underline cursor-help">
+                                  Voir photos
+                                </span>
+
+                                {hoveredSite?.campsiteId ===
+                                  site.campsiteId && (
+                                  <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-3 shadow-2xl">
+                                    <div className="text-sm font-semibold mb-2">
+                                      Photos du terrain {site.siteCode}
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-2">
+                                      {site.photoUrls?.length > 0 ? (
+                                        site.photoUrls.map((url) => (
+                                          <img
+                                            key={url}
+                                            src={url}
+                                            alt={`Terrain ${site.siteCode}`}
+                                            className="h-20 w-full rounded object-cover"
+                                          />
+                                        ))
+                                      ) : (
+                                        <>
+                                          <div className="h-20 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                                            Aucune
+                                          </div>
+                                          <div className="h-20 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                                            photo
+                                          </div>
+                                          <div className="h-20 rounded bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+                                            disponible
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3 text-right">
+                                <button className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-semibold hover:bg-green-700">
+                                  Choisir
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {extraCount > 0 && (
+                        <div className="border-t bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+                          + {extraCount} terrain(s) supplémentaire(s)
+                          disponible(s) selon cette recherche.
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

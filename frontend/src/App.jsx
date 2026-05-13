@@ -1,6 +1,6 @@
 // ============================================================
 // Fichier : frontend/src/App.jsx
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-12
 //
 // Résumé des modifications :
 // - Ajout promotions marketing
@@ -8,7 +8,7 @@
 // - Ajout calculateur de prix
 // - Correction du conflit de routes promotions
 // - Ajout route publique temporaire /reservation-test
-// - Ajout routes résultats recherche réservation
+// - Ajout route publique /campings
 //
 // Historique des modifications :
 // 2026-05-05
@@ -21,11 +21,9 @@
 // - Ajout import ReservationPage
 // - Ajout route publique temporaire /reservation-test
 //
-// 2026-05-09
-// - Ajout SearchCampgroundsResultsPage
-// - Ajout SearchCampsitesResultsPage
-// - Ajout routes /reservation-test/results/campgrounds
-// - Ajout routes /reservation-test/results/campsites
+// 2026-05-12
+// - Ajout import CampingsPage
+// - Ajout route publique /campings
 // ============================================================
 
 import React from "react";
@@ -39,6 +37,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
 import AccountPage from "./pages/AccountPage";
+import CampingsPage from "./pages/CampingsPage";
 
 import SiteManagerHome from "./pages/admin/SiteManagerHome";
 import CampingManagerHome from "./pages/admin/CampingManagerHome";
@@ -61,8 +60,6 @@ import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 import PriceCalculatorPage from "./pages/admin/PriceCalculatorPage";
 
 import ReservationPage from "./pages/reservation/ReservationPage";
-import SearchCampgroundsResultsPage from "./pages/reservation/SearchCampgroundsResultsPage";
-import SearchCampsitesResultsPage from "./pages/reservation/SearchCampsitesResultsPage";
 
 function ScrollToTop() {
   React.useEffect(() => {
@@ -96,15 +93,9 @@ function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/auth" element={<AuthRoute />} />
 
+      <Route path="/campings" element={<CampingsPage />} />
+
       <Route path="/reservation-test" element={<ReservationPage />} />
-      <Route
-        path="/reservation-test/results/campgrounds"
-        element={<SearchCampgroundsResultsPage />}
-      />
-      <Route
-        path="/reservation-test/results/campsites"
-        element={<SearchCampsitesResultsPage />}
-      />
 
       <Route
         path="/account"

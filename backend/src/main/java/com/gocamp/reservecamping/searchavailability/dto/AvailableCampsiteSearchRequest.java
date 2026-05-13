@@ -1,12 +1,15 @@
 // ============================================================
 // Fichier : AvailableCampsiteSearchRequest.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/dto
-// Dernière modification : 2026-05-09
+// Dernière modification : 2026-05-12
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - DTO de requête pour rechercher des terrains disponibles
 // - Supporte dates, GPS, rayon, campground précis, équipement
+// - Supporte le contexte équipement actif
+// - Supporte la longueur manuelle de l’équipement
+// - Supporte les extensions côté conducteur/passager
 // - Supporte les filtres de base : eau, électricité, égout,
 //   ampérages requis
 // - Supporte les filtres avancés : accès direct, surfaces,
@@ -21,6 +24,11 @@
 // - Ajout useEquipmentContext activé par défaut
 // - Ajout filtres avancés
 // - Ajout requires15_20Amp / requires30Amp / requires50Amp
+//
+// 2026-05-12
+// - Ajout driverSideSlideOutCount
+// - Ajout passengerSideSlideOutCount
+// - Conservation de equipmentLengthFeet pour recherche manuelle
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.dto;
@@ -44,6 +52,9 @@ public class AvailableCampsiteSearchRequest {
 
     private Boolean useEquipmentContext = true;
     private BigDecimal equipmentLengthFeet;
+
+    private Integer driverSideSlideOutCount = 0;
+    private Integer passengerSideSlideOutCount = 0;
 
     private Boolean requiresWater = false;
     private Boolean requiresElectricity = false;
@@ -134,6 +145,22 @@ public class AvailableCampsiteSearchRequest {
 
     public void setEquipmentLengthFeet(BigDecimal equipmentLengthFeet) {
         this.equipmentLengthFeet = equipmentLengthFeet;
+    }
+
+    public Integer getDriverSideSlideOutCount() {
+        return driverSideSlideOutCount;
+    }
+
+    public void setDriverSideSlideOutCount(Integer driverSideSlideOutCount) {
+        this.driverSideSlideOutCount = driverSideSlideOutCount;
+    }
+
+    public Integer getPassengerSideSlideOutCount() {
+        return passengerSideSlideOutCount;
+    }
+
+    public void setPassengerSideSlideOutCount(Integer passengerSideSlideOutCount) {
+        this.passengerSideSlideOutCount = passengerSideSlideOutCount;
     }
 
     public Boolean getRequiresWater() {

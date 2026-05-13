@@ -1,7 +1,7 @@
 // ============================================================
 // Fichier : SearchAvailabilityService.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/service
-// Dernière modification : 2026-05-10
+// Dernière modification : 2026-05-12
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
@@ -14,6 +14,18 @@
 // - Applique les filtres : eau, égout, ampérages,
 //   accès direct, surfaces, services camping, activités
 // - Corrige la logique ampérage : 30 + 50 = 30 OU 50
+// - Corrige la longueur manuelle lorsque le contexte équipement est désactivé
+//
+// Historique des modifications :
+// 2026-05-10
+// - Correction logique ampérage
+// - 30 + 50 amp = OR
+// - Validation réelle sur terrain
+//
+// 2026-05-12
+// - Correction resolveEquipmentLengthFeet()
+// - equipmentLengthFeet est maintenant prioritaire même si
+//   useEquipmentContext = false
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.service;
@@ -310,15 +322,15 @@ public class SearchAvailabilityService {
     private BigDecimal resolveEquipmentLengthFeet(
             AvailableCampsiteSearchRequest request
     ) {
+        if (request.getEquipmentLengthFeet() != null) {
+            return request.getEquipmentLengthFeet();
+        }
+
         boolean useEquipmentContext =
                 !Boolean.FALSE.equals(request.getUseEquipmentContext());
 
         if (!useEquipmentContext) {
             return null;
-        }
-
-        if (request.getEquipmentLengthFeet() != null) {
-            return request.getEquipmentLengthFeet();
         }
 
         if (request.getUserId() == null) {

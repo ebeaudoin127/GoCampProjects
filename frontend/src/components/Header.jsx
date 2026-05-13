@@ -1,13 +1,14 @@
 // ============================================================
 // Fichier : Header.jsx
 // Chemin  : frontend/src/components
-// Dernière modification : 2026-05-06
+// Dernière modification : 2026-05-12
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
 // - Header principal GoCamp
 // - Ajout du lien vers l’espace admin selon le rôle
 // - Intégration temporaire du module réservation
+// - Le bouton Campings ouvre la page publique /campings
 //
 // Historique des modifications :
 // 2026-04-16
@@ -15,15 +16,17 @@
 //
 // 2026-05-06
 // - Le bouton "Réserver" ouvre maintenant /reservation-test
+//
+// 2026-05-12
+// - Le bouton "Campings" ouvre maintenant /campings
 // ============================================================
 
 import React, { useState } from "react";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Header() {
-
   const [open, setOpen] = useState(false);
 
   const {
@@ -39,20 +42,19 @@ export default function Header() {
   const navigate = useNavigate();
 
   const isLoggedIn = !!token && !!user;
-
   const safeRole = getRoleName(user) || "Compte GoCamp";
 
   const adminLink = canAccessSiteManager
     ? "/site-manager"
     : canAccessCampingManager
-    ? "/camping-manager"
-    : null;
+      ? "/camping-manager"
+      : null;
 
   const adminLabel = canAccessSiteManager
     ? "Gestion du site"
     : canAccessCampingManager
-    ? "Gestion camping"
-    : null;
+      ? "Gestion camping"
+      : null;
 
   const handleLogout = () => {
     logout();
@@ -60,172 +62,189 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white shadow-sm relative z-30">
-
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-
-        <img
-          src="/logos/gocamp-logo.png"
-          alt="GoCamp Logo"
-          className="h-[150px] w-auto object-contain cursor-pointer"
+    <header className="bg-white border-b border-gray-100">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <button
+          type="button"
           onClick={() => navigate("/")}
-        />
+          className="flex items-center"
+        >
+          <img
+            src="/logos/gocamp-logo.png"
+            alt="GoCamp Logo"
+            className="h-20 w-auto"
+          />
+        </button>
 
-        <nav className="hidden md:flex items-center gap-8 text-gray-700 font-medium">
-
-          {/* RÉSERVER */}
+        <nav className="hidden items-center gap-8 md:flex">
           <Link
             to="/reservation-test"
-            className="hover:text-green-600"
+            className="font-semibold text-gray-800 hover:text-orange-600"
           >
             Réserver
           </Link>
 
-          {/* CAMPINGS */}
           <Link
-            to="/"
-            className="hover:text-green-600"
+            to="/campings"
+            className="font-semibold text-gray-800 hover:text-orange-600"
           >
             Campings
           </Link>
 
-          {/* À PROPOS */}
           <Link
-            to="/"
-            className="hover:text-green-600"
+            to="/about"
+            className="font-semibold text-gray-800 hover:text-orange-600"
           >
             À propos
           </Link>
 
-          {/* CONTACT */}
           <Link
-            to="/"
-            className="hover:text-green-600"
+            to="/contact"
+            className="font-semibold text-gray-800 hover:text-orange-600"
           >
             Contact
           </Link>
 
-          {/* MON COMPTE */}
           {isLoggedIn && (
             <Link
               to="/account"
-              className="text-green-600 hover:underline"
+              className="font-semibold text-green-700 hover:text-green-800"
             >
               Mon compte
             </Link>
           )}
 
-          {/* ADMIN */}
           {isLoggedIn && adminLink && (
             <Link
               to={adminLink}
-              className="text-blue-600 hover:underline"
+              className="font-semibold text-blue-700 hover:text-blue-800"
             >
               {adminLabel}
             </Link>
           )}
+        </nav>
 
-          {/* AUTH */}
+        <div className="hidden items-center gap-4 md:flex">
           {loading ? (
-
-            <span>Chargement...</span>
-
+            <span className="text-sm text-gray-500">Chargement...</span>
           ) : isLoggedIn ? (
-
-            <div className="flex items-center gap-4">
-
-              <div className="text-right text-sm">
-                <div className="font-semibold">
+            <>
+              <div className="text-right">
+                <div className="text-sm font-semibold text-gray-800">
                   Bonjour, {user?.firstname || "Utilisateur"}
                 </div>
 
-                <div className="text-gray-500 text-xs">
+                <div className="text-xs uppercase text-gray-500">
                   {safeRole}
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={handleLogout}
-                className="text-red-600 hover:underline"
+                className="font-semibold text-red-600 hover:text-red-700"
               >
                 Déconnexion
               </button>
-            </div>
-
+            </>
           ) : (
-
             <Link
               to="/auth"
-              className="flex items-center gap-2"
+              className="rounded-xl bg-orange-600 px-4 py-2 font-semibold text-white hover:bg-orange-700"
             >
-              <User size={18} />
               Se connecter / Créer un compte
             </Link>
           )}
-        </nav>
+        </div>
 
-        {/* MOBILE MENU BUTTON */}
         <button
-          className="md:hidden"
+          type="button"
           onClick={() => setOpen(!open)}
+          className="md:hidden"
         >
-          {open ? <X size={28} /> : <Menu size={28} />}
+          {open ? <X /> : <Menu />}
         </button>
       </div>
 
-      {/* MOBILE MENU */}
       {open && (
-
-        <nav className="md:hidden bg-white border-t px-6 py-4 flex flex-col gap-4">
-
-          <Link to="/reservation-test">
-            Réserver
-          </Link>
-
-          <Link to="/">
-            Campings
-          </Link>
-
-          <Link to="/">
-            À propos
-          </Link>
-
-          <Link to="/">
-            Contact
-          </Link>
-
-          {isLoggedIn && (
-            <Link to="/account">
-              Mon compte
-            </Link>
-          )}
-
-          {isLoggedIn && adminLink && (
-            <Link to={adminLink}>
-              {adminLabel}
-            </Link>
-          )}
-
-          {loading ? (
-
-            <span>Chargement...</span>
-
-          ) : isLoggedIn ? (
-
-            <button
-              onClick={handleLogout}
-              className="text-red-600 text-left"
+        <div className="border-t bg-white px-6 py-4 md:hidden">
+          <div className="flex flex-col gap-4">
+            <Link
+              to="/reservation-test"
+              onClick={() => setOpen(false)}
+              className="font-semibold text-gray-800"
             >
-              Déconnexion
-            </button>
-
-          ) : (
-
-            <Link to="/auth">
-              Se connecter / Créer un compte
+              Réserver
             </Link>
-          )}
-        </nav>
+
+            <Link
+              to="/campings"
+              onClick={() => setOpen(false)}
+              className="font-semibold text-gray-800"
+            >
+              Campings
+            </Link>
+
+            <Link
+              to="/about"
+              onClick={() => setOpen(false)}
+              className="font-semibold text-gray-800"
+            >
+              À propos
+            </Link>
+
+            <Link
+              to="/contact"
+              onClick={() => setOpen(false)}
+              className="font-semibold text-gray-800"
+            >
+              Contact
+            </Link>
+
+            {isLoggedIn && (
+              <Link
+                to="/account"
+                onClick={() => setOpen(false)}
+                className="font-semibold text-green-700"
+              >
+                Mon compte
+              </Link>
+            )}
+
+            {isLoggedIn && adminLink && (
+              <Link
+                to={adminLink}
+                onClick={() => setOpen(false)}
+                className="font-semibold text-blue-700"
+              >
+                {adminLabel}
+              </Link>
+            )}
+
+            {loading ? (
+              <span className="text-sm text-gray-500">Chargement...</span>
+            ) : isLoggedIn ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  handleLogout();
+                }}
+                className="text-left font-semibold text-red-600"
+              >
+                Déconnexion
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={() => setOpen(false)}
+                className="font-semibold text-orange-600"
+              >
+                Se connecter / Créer un compte
+              </Link>
+            )}
+          </div>
+        </div>
       )}
     </header>
   );
