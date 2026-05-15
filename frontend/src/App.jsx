@@ -1,6 +1,6 @@
 // ============================================================
 // Fichier : frontend/src/App.jsx
-// Dernière modification : 2026-05-12
+// Dernière modification : 2026-05-14
 //
 // Résumé des modifications :
 // - Ajout promotions marketing
@@ -8,7 +8,9 @@
 // - Ajout calculateur de prix
 // - Correction du conflit de routes promotions
 // - Ajout route publique temporaire /reservation-test
+// - Ajout routes résultats de recherche réservation
 // - Ajout route publique /campings
+// - Ajout route confirmation réservation avant paiement
 //
 // Historique des modifications :
 // 2026-05-05
@@ -24,6 +26,14 @@
 // 2026-05-12
 // - Ajout import CampingsPage
 // - Ajout route publique /campings
+//
+// 2026-05-14
+// - Ajout import SearchCampgroundsResultsPage
+// - Ajout import SearchCampsitesResultsPage
+// - Ajout route /reservation-test/results/campgrounds
+// - Ajout route /reservation-test/results/campsites
+// - Ajout import ReservationConfirmationPage
+// - Ajout route /reservation-test/confirmation
 // ============================================================
 
 import React from "react";
@@ -60,6 +70,9 @@ import PricingPromotionsPage from "./pages/admin/PricingPromotionsPage";
 import PriceCalculatorPage from "./pages/admin/PriceCalculatorPage";
 
 import ReservationPage from "./pages/reservation/ReservationPage";
+import SearchCampgroundsResultsPage from "./pages/reservation/SearchCampgroundsResultsPage";
+import SearchCampsitesResultsPage from "./pages/reservation/SearchCampsitesResultsPage";
+import ReservationConfirmationPage from "./pages/reservation/ReservationConfirmationPage";
 
 function ScrollToTop() {
   React.useEffect(() => {
@@ -96,6 +109,18 @@ function AppRoutes() {
       <Route path="/campings" element={<CampingsPage />} />
 
       <Route path="/reservation-test" element={<ReservationPage />} />
+      <Route
+        path="/reservation-test/results/campgrounds"
+        element={<SearchCampgroundsResultsPage />}
+      />
+      <Route
+        path="/reservation-test/results/campsites"
+        element={<SearchCampsitesResultsPage />}
+      />
+      <Route
+        path="/reservation-test/confirmation"
+        element={<ReservationConfirmationPage />}
+      />
 
       <Route
         path="/account"

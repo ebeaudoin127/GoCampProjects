@@ -1,7 +1,7 @@
 // ============================================================
 // Fichier : SearchAvailabilitySqlSelector.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/selector
-// Dernière modification : 2026-05-10
+// Dernière modification : 2026-05-14
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
@@ -10,6 +10,26 @@
 // - Ajout des services directs du site
 // - Ajout des ampérages disponibles sur le site
 // - Ajout services/activités du camping
+// - Ajout dimensions du terrain pour l’écran résultats
+//
+// Historique des modifications :
+// 2026-05-08
+// - Création initiale du selector SQL
+//
+// 2026-05-09
+// - Ajout filtre equipmentLengthFeet
+// - Ajout photos
+// - Ajout service type, pull-through et surfaces
+//
+// 2026-05-10
+// - Ajout hasWater / hasElectricity / hasSewer
+// - Ajout has15_20Amp / has30Amp / has50Amp
+// - Ajout campgroundServiceCodes
+// - Ajout activityCodes
+//
+// 2026-05-14
+// - Ajout width_feet
+// - Ajout length_feet
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.selector;
@@ -64,11 +84,11 @@ public class SearchAvailabilitySqlSelector {
                         )
                         ELSE 0
                     END AS distance_km,
-
                     cs.id,
                     cs.site_code,
+                    cs.width_feet,
+                    cs.length_feet,
                     cs.max_equipment_length_feet,
-
                     (
                         SELECT cp.thumbnail_path
                         FROM campsite_photo cp
@@ -77,7 +97,6 @@ public class SearchAvailabilitySqlSelector {
                         ORDER BY cp.is_primary DESC, cp.display_order ASC, cp.id ASC
                         LIMIT 1 OFFSET 0
                     ) AS photo_url_1,
-
                     (
                         SELECT cp.thumbnail_path
                         FROM campsite_photo cp
@@ -86,7 +105,6 @@ public class SearchAvailabilitySqlSelector {
                         ORDER BY cp.is_primary DESC, cp.display_order ASC, cp.id ASC
                         LIMIT 1 OFFSET 1
                     ) AS photo_url_2,
-
                     (
                         SELECT cp.thumbnail_path
                         FROM campsite_photo cp
@@ -95,11 +113,9 @@ public class SearchAvailabilitySqlSelector {
                         ORDER BY cp.is_primary DESC, cp.display_order ASC, cp.id ASC
                         LIMIT 1 OFFSET 2
                     ) AS photo_url_3,
-
                     cs.is_pull_through,
                     sst.code,
                     sst.name_fr,
-
                     (
                         SELECT GROUP_CONCAT(
                             CONCAT_WS('|', st.code, st.name_fr)
@@ -110,15 +126,12 @@ public class SearchAvailabilitySqlSelector {
                             ON st.id = cst.site_surface_type_id
                         WHERE cst.campsite_id = cs.id
                     ) AS surface_values,
-
                     cs.has_water,
                     cs.has_electricity,
                     cs.has_sewer,
-
                     cs.has_15_20_amp,
                     cs.has_30_amp,
                     cs.has_50_amp,
-
                     (
                         SELECT GROUP_CONCAT(DISTINCT srv.code SEPARATOR ',')
                         FROM campground_service csrv
@@ -126,7 +139,6 @@ public class SearchAvailabilitySqlSelector {
                             ON srv.id = csrv.service_id
                         WHERE csrv.campground_id = cg.id
                     ) AS campground_service_codes,
-
                     (
                         SELECT GROUP_CONCAT(DISTINCT act.code SEPARATOR ',')
                         FROM campground_activity ca
@@ -134,13 +146,11 @@ public class SearchAvailabilitySqlSelector {
                             ON act.id = ca.activity_id
                         WHERE ca.campground_id = cg.id
                     ) AS activity_codes
-
                 FROM campground cg
                 INNER JOIN campsite cs
                     ON cs.campground_id = cg.id
                 LEFT JOIN site_service_type sst
                     ON sst.id = cs.site_service_type_id
-
                 WHERE cs.is_active = true
                   AND (:campgroundId IS NULL OR cg.id = :campgroundId)
                   AND cg.gps_latitude IS NOT NULL
@@ -151,19 +161,16 @@ public class SearchAvailabilitySqlSelector {
                         OR cs.max_equipment_length_feet >= :equipmentLengthFeet
                   )
                   AND NOT EXISTS (
-                      SELECT 1
-                      FROM reservations r
-                      WHERE r.campsite_id = cs.id
-                        AND r.status IN ('PENDING', 'CONFIRMED')
-                        AND r.arrival_date < :departureDate
-                        AND r.departure_date > :arrivalDate
+                        SELECT 1
+                        FROM reservations r
+                        WHERE r.campsite_id = cs.id
+                          AND r.status IN ('PENDING', 'CONFIRMED')
+                          AND r.arrival_date < :departureDate
+                          AND r.departure_date > :arrivalDate
                   )
-
-                HAVING
-                    :campgroundId IS NOT NULL
+                HAVING :campgroundId IS NOT NULL
                     OR :radiusKm IS NULL
                     OR distance_km <= :radiusKm
-
                 ORDER BY distance_km ASC, cg.name ASC, cs.site_code ASC
                 """;
     }

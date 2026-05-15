@@ -1,7 +1,7 @@
 // ============================================================
 // Fichier : SearchAvailabilityService.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/service
-// Dernière modification : 2026-05-12
+// Dernière modification : 2026-05-14
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
@@ -15,6 +15,8 @@
 //   accès direct, surfaces, services camping, activités
 // - Corrige la logique ampérage : 30 + 50 = 30 OU 50
 // - Corrige la longueur manuelle lorsque le contexte équipement est désactivé
+// - Ajoute les détails complets des terrains dans allCampsites :
+//   largeur, longueur, accès direct, surface, services et ampérages
 //
 // Historique des modifications :
 // 2026-05-10
@@ -26,6 +28,13 @@
 // - Correction resolveEquipmentLengthFeet()
 // - equipmentLengthFeet est maintenant prioritaire même si
 //   useEquipmentContext = false
+//
+// 2026-05-14
+// - Ajout mapping widthFeet / lengthFeet
+// - Ajout mapping pullThrough
+// - Ajout mapping surfaceValues
+// - Ajout mapping hasWater / hasElectricity / hasSewer
+// - Ajout mapping has15_20Amp / has30Amp / has50Amp
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.service;
@@ -451,11 +460,46 @@ public class SearchAvailabilityService {
         dto.setCampgroundId(row.getCampgroundId());
         dto.setCampgroundName(row.getCampgroundName());
         dto.setDistanceKm(row.getDistanceKm());
+
         dto.setCampsiteId(row.getCampsiteId());
         dto.setSiteCode(row.getSiteCode());
+
+        dto.setWidthFeet(row.getWidthFeet());
+        dto.setLengthFeet(row.getLengthFeet());
         dto.setMaxEquipmentLengthFeet(
                 row.getMaxEquipmentLengthFeet()
         );
+
+        dto.setPullThrough(
+                Boolean.TRUE.equals(row.getPullThrough())
+        );
+
+        dto.setSurfaceValues(row.getSurfaceValues());
+
+        dto.setHasWater(
+                Boolean.TRUE.equals(row.getHasWater())
+        );
+
+        dto.setHasElectricity(
+                Boolean.TRUE.equals(row.getHasElectricity())
+        );
+
+        dto.setHasSewer(
+                Boolean.TRUE.equals(row.getHasSewer())
+        );
+
+        dto.setHas15_20Amp(
+                Boolean.TRUE.equals(row.getHas15_20Amp())
+        );
+
+        dto.setHas30Amp(
+                Boolean.TRUE.equals(row.getHas30Amp())
+        );
+
+        dto.setHas50Amp(
+                Boolean.TRUE.equals(row.getHas50Amp())
+        );
+
         dto.setPhotoUrls(buildPhotoUrls(row));
 
         return dto;

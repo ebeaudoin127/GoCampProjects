@@ -1,7 +1,7 @@
 // ============================================================
 // Fichier : AvailableCampsiteSearchRowProjection.java
 // Chemin  : backend/src/main/java/com/gocamp/reservecamping/searchavailability/repository
-// Dernière modification : 2026-05-10
+// Dernière modification : 2026-05-14
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
@@ -9,6 +9,7 @@
 // - Combine campground + campsite + distance + photos + filtres
 // - Ajout des services directs du site
 // - Ajout des ampérages disponibles sur le site
+// - Ajout des dimensions du terrain pour l’écran résultats
 //
 // Historique des modifications :
 // 2026-05-08
@@ -25,6 +26,10 @@
 // - Ajout has15_20Amp / has30Amp / has50Amp
 // - Ajout campgroundServiceCodes
 // - Ajout activityCodes
+//
+// 2026-05-14
+// - Ajout widthFeet
+// - Ajout lengthFeet
 // ============================================================
 
 package com.gocamp.reservecamping.searchavailability.repository;
@@ -46,6 +51,10 @@ public interface AvailableCampsiteSearchRowProjection {
     Long getCampsiteId();
 
     String getSiteCode();
+
+    BigDecimal getWidthFeet();
+
+    BigDecimal getLengthFeet();
 
     BigDecimal getMaxEquipmentLengthFeet();
 

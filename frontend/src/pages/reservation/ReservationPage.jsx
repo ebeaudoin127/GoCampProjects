@@ -1,7 +1,7 @@
 // ============================================================
 // Fichier : ReservationPage.jsx
 // Chemin  : frontend/src/pages/reservation
-// Dernière modification : 2026-05-12
+// Dernière modification : 2026-05-14
 // Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
@@ -12,9 +12,16 @@
 // - Ajoute longueur équipement et extensions conducteur/passager
 // - Résumé cliquable vers les pages de résultats complets
 // - Sauvegarde du résultat dans sessionStorage
+// - Sauvegarde les critères de recherche dans sessionStorage
+//   pour la page de confirmation : dates, nuits, équipement,
+//   extensions, services et ampérages
 // - Affiche le nombre de terrains supplémentaires disponibles
 //   sous l’aperçu de chaque camping
 // - Corrige le positionnement du popup photo dans la liste des terrains
+// - Le bouton "Voir tous les terrains" ouvre la page des terrains
+//   disponibles filtrée sur le camping sélectionné
+// - Le bouton "Choisir" ouvre la page des terrains disponibles
+//   en mettant le terrain choisi en sélection
 //
 // Historique des modifications :
 // 2026-05-06
@@ -32,6 +39,11 @@
 // - Envoi de equipmentLengthFeet au backend
 // - Ajout compteur de terrains supplémentaires sous chaque aperçu
 // - Correction popup photos : overflow visible + positionnement top/right
+//
+// 2026-05-14
+// - Ajout navigation "Voir tous les terrains" par camping
+// - Ajout navigation "Choisir" vers la page de détails des terrains
+// - Ajout searchCriteria dans sessionStorage pour confirmation
 // ============================================================
 
 import React, { useState } from "react";
@@ -56,6 +68,19 @@ const emptyAdvancedFilters = {
   campgroundServiceCodes: [],
   activityCodes: [],
 };
+
+function calculateNights(arrivalDate, departureDate) {
+  if (!arrivalDate || !departureDate) {
+    return null;
+  }
+
+  const start = new Date(`${arrivalDate}T00:00:00`);
+  const end = new Date(`${departureDate}T00:00:00`);
+  const diffMs = end.getTime() - start.getTime();
+  const nights = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  return nights > 0 ? nights : null;
+}
 
 export default function ReservationPage() {
   const navigate = useNavigate();
@@ -108,20 +133,97 @@ export default function ReservationPage() {
     }
   }
 
+  function buildSearchCriteria() {
+    const nights = calculateNights(arrivalDate, departureDate);
+
+    return {
+      arrivalDate,
+      departureDate,
+      nights,
+
+      latitude: defaultLatitude,
+      longitude: defaultLongitude,
+      radiusKm: defaultRadiusKm,
+
+      userId,
+      useEquipmentContext,
+
+      equipmentLengthFeet:
+        useEquipmentContext || equipmentLengthFeet === ""
+          ? null
+          : Number(equipmentLengthFeet),
+
+      hasDriverSideSlideOut,
+      driverSideSlideOutCount:
+        useEquipmentContext || !hasDriverSideSlideOut
+          ? 0
+          : Number(driverSideSlideOutCount || 0),
+
+      hasPassengerSideSlideOut,
+      passengerSideSlideOutCount:
+        useEquipmentContext || !hasPassengerSideSlideOut
+          ? 0
+          : Number(passengerSideSlideOutCount || 0),
+
+      requiresWater: useEquipmentContext ? false : requiresWater,
+      requiresElectricity: useEquipmentContext ? false : requiresElectricity,
+      requiresSewer: useEquipmentContext ? false : requiresSewer,
+      requires15_20Amp: useEquipmentContext ? false : requires15_20Amp,
+      requires30Amp: useEquipmentContext ? false : requires30Amp,
+      requires50Amp: useEquipmentContext ? false : requires50Amp,
+
+      advancedFilters,
+    };
+  }
+
+  function buildStoredSearchSummary(summary) {
+    const searchCriteria = buildSearchCriteria();
+
+    return {
+      ...summary,
+      arrivalDate,
+      departureDate,
+      nights: searchCriteria.nights,
+      searchCriteria,
+    };
+  }
+
   function saveSearchSummary(summary) {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(summary));
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(buildStoredSearchSummary(summary))
+    );
   }
 
   function goToCampgroundsResults() {
     if (!searchSummary) return;
+
     saveSearchSummary(searchSummary);
     navigate("/reservation-test/results/campgrounds");
   }
 
-  function goToCampsitesResults() {
+  function goToCampsitesResults(campgroundId = null, selectedCampsiteId = null) {
     if (!searchSummary) return;
+
     saveSearchSummary(searchSummary);
-    navigate("/reservation-test/results/campsites");
+
+    const params = new URLSearchParams();
+
+    if (campgroundId) {
+      params.set("campgroundId", String(campgroundId));
+    }
+
+    if (selectedCampsiteId) {
+      params.set("selectedCampsiteId", String(selectedCampsiteId));
+    }
+
+    const queryString = params.toString();
+
+    navigate(
+      queryString
+        ? `/reservation-test/results/campsites?${queryString}`
+        : "/reservation-test/results/campsites"
+    );
   }
 
   async function handleCheckAvailability() {
@@ -153,6 +255,8 @@ export default function ReservationPage() {
       setSearchSummary(null);
       sessionStorage.removeItem(STORAGE_KEY);
 
+      const searchCriteria = buildSearchCriteria();
+
       const result = await searchAvailabilitySummary({
         arrivalDate,
         departureDate,
@@ -162,33 +266,32 @@ export default function ReservationPage() {
         userId,
         useEquipmentContext,
         advancedFilters: {
-          equipmentLengthFeet:
-            useEquipmentContext || equipmentLengthFeet === ""
-              ? null
-              : Number(equipmentLengthFeet),
-
-          driverSideSlideOutCount:
-            useEquipmentContext || !hasDriverSideSlideOut
-              ? 0
-              : Number(driverSideSlideOutCount || 0),
-
+          equipmentLengthFeet: searchCriteria.equipmentLengthFeet,
+          driverSideSlideOutCount: searchCriteria.driverSideSlideOutCount,
           passengerSideSlideOutCount:
-            useEquipmentContext || !hasPassengerSideSlideOut
-              ? 0
-              : Number(passengerSideSlideOutCount || 0),
+            searchCriteria.passengerSideSlideOutCount,
 
-          requiresWater: useEquipmentContext ? false : requiresWater,
-          requiresElectricity: useEquipmentContext ? false : requiresElectricity,
-          requiresSewer: useEquipmentContext ? false : requiresSewer,
-          requires15_20Amp: useEquipmentContext ? false : requires15_20Amp,
-          requires30Amp: useEquipmentContext ? false : requires30Amp,
-          requires50Amp: useEquipmentContext ? false : requires50Amp,
+          requiresWater: searchCriteria.requiresWater,
+          requiresElectricity: searchCriteria.requiresElectricity,
+          requiresSewer: searchCriteria.requiresSewer,
+          requires15_20Amp: searchCriteria.requires15_20Amp,
+          requires30Amp: searchCriteria.requires30Amp,
+          requires50Amp: searchCriteria.requires50Amp,
+
           ...advancedFilters,
         },
       });
 
-      setSearchSummary(result);
-      saveSearchSummary(result);
+      const storedResult = {
+        ...result,
+        arrivalDate,
+        departureDate,
+        nights: searchCriteria.nights,
+        searchCriteria,
+      };
+
+      setSearchSummary(storedResult);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(storedResult));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -537,7 +640,7 @@ export default function ReservationPage() {
 
               <button
                 type="button"
-                onClick={goToCampsitesResults}
+                onClick={() => goToCampsitesResults()}
                 className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-left hover:bg-blue-100 transition"
               >
                 <div className="text-sm text-blue-700">
@@ -586,7 +689,13 @@ export default function ReservationPage() {
                         </p>
                       </div>
 
-                      <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          goToCampsitesResults(campground.campgroundId)
+                        }
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+                      >
                         Voir tous les terrains
                       </button>
                     </div>
@@ -663,7 +772,16 @@ export default function ReservationPage() {
                               </td>
 
                               <td className="px-4 py-3 text-right">
-                                <button className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-semibold hover:bg-green-700">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    goToCampsitesResults(
+                                      campground.campgroundId,
+                                      site.campsiteId
+                                    )
+                                  }
+                                  className="rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-semibold hover:bg-green-700"
+                                >
                                   Choisir
                                 </button>
                               </td>
