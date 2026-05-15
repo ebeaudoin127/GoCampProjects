@@ -1,10 +1,27 @@
 // ============================================================
 // Fichier : AuthController.java
-// Modifié : 2026-04-16
+// Chemin  : backend/src/main/java/com/gocamp/reservecamping/auth
+// Dernière modification : 2026-05-14
+// Auteur : ChatGPT pour Eric Beaudoin
 //
 // Résumé :
+// - Gestion authentification JWT
+// - Endpoint /auth/me utilisé par le frontend
+// - Retourne maintenant les coordonnées complètes du client
+//   pour la confirmation de réservation
+//
+// Historique des modifications :
+// 2026-04-16
 // - /auth/me retourne maintenant MeResponse
 // - rôle converti en STRING
+//
+// 2026-05-14
+// - Ajout phone dans /auth/me
+// - Ajout address dans /auth/me
+// - Ajout city dans /auth/me
+// - Ajout postalCode dans /auth/me
+// - Ajout countryName dans /auth/me
+// - Ajout provinceStateName dans /auth/me
 // ============================================================
 
 package com.gocamp.reservecamping.auth;
@@ -53,7 +70,7 @@ public class AuthController {
     }
 
     // ============================================
-    // 🔥 VERSION PROPRE
+    // CURRENT USER
     // ============================================
     @GetMapping("/me")
     public ResponseEntity<?> me(@AuthenticationPrincipal UserDetails userDetails) {
@@ -67,13 +84,25 @@ public class AuthController {
         User user = userRepo.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        // 🔥 Conversion en DTO
         MeResponse response = new MeResponse(
                 user.getId(),
                 user.getFirstname(),
                 user.getLastname(),
                 user.getEmail(),
-                user.getRole().getName() // IMPORTANT
+                user.getRole().getName(),
+
+                user.getPhone(),
+                user.getAddress(),
+                user.getCity(),
+                user.getPostalCode(),
+
+                user.getCountry() != null
+                        ? user.getCountry().getName()
+                        : null,
+
+                user.getProvinceState() != null
+                        ? user.getProvinceState().getName()
+                        : null
         );
 
         return ResponseEntity.ok(response);
@@ -91,6 +120,9 @@ public class AuthController {
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
         service.changePassword(user, req);
-        return ResponseEntity.ok(Map.of("message", "Mot de passe mis à jour"));
+
+        return ResponseEntity.ok(
+                Map.of("message", "Mot de passe mis à jour")
+        );
     }
 }
